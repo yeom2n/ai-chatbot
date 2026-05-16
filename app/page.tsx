@@ -13,9 +13,9 @@ const suggestions = [
   "컴퓨터공학과 과목 추천",
   "경영학과는 뭘 배워?",
   "미적분Ⅱ는 어떤 과목이야?",
-  "중앙대 소프트웨어학부 권장과목",
   "디자인 계열 추천 과목",
   "간호학과 선택과목 추천",
+  "중앙대 소프트웨어학부 권장과목",
 ];
 
 export default function Home() {
@@ -24,7 +24,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "안녕하세요. 운양고 선택과목 안내 챗봇입니다.\n진로, 학과, 과목명을 입력하면 자료를 바탕으로 정리해드릴게요.",
+        "안녕하세요. 운양고 선택과목 안내 챗봇입니다.\n학과, 진로, 과목명을 입력하면 자료를 바탕으로 정리해드릴게요.",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -66,286 +66,125 @@ export default function Home() {
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(135deg, #eef2ff 0%, #f8fafc 45%, #e0f2fe 100%)",
-        color: "#0f172a",
-        fontFamily:
-          "Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
-        padding: 24,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1180,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "300px 1fr",
-          gap: 22,
-        }}
-      >
-        <aside
-          style={{
-            background: "rgba(255,255,255,0.82)",
-            border: "1px solid rgba(148,163,184,0.28)",
-            borderRadius: 28,
-            padding: 24,
-            boxShadow: "0 24px 70px rgba(15,23,42,0.10)",
-            height: "calc(100vh - 48px)",
-            position: "sticky",
-            top: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 26,
-              marginBottom: 18,
-            }}
-          >
-            🎓
+    <main className="min-h-screen bg-[#f4f7fb] text-slate-900">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-6">
+        <header className="mb-5 flex items-center justify-between rounded-3xl bg-white px-6 py-5 shadow-sm border border-slate-200">
+          <div>
+            <div className="text-sm font-bold text-blue-600">Unyang High School</div>
+            <h1 className="mt-1 text-2xl font-black tracking-tight">
+              2026 선택과목 안내 챗봇
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              학과·진로·과목 정보를 자료 기반으로 정리해줍니다.
+            </p>
           </div>
 
-          <h1 style={{ fontSize: 27, lineHeight: 1.25, margin: 0 }}>
-            운양고
-            <br />
-            선택과목 챗봇
-          </h1>
-
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: 14,
-              lineHeight: 1.7,
-              marginTop: 14,
-              marginBottom: 22,
-            }}
-          >
-            학과, 진로, 과목명을 입력하면 2026 선택교과목 자료를 바탕으로
-            보기 쉽게 정리합니다.
-          </p>
-
-          <div
-            style={{
-              fontSize: 13,
-              color: "#475569",
-              background: "#f1f5f9",
-              border: "1px solid #e2e8f0",
-              borderRadius: 18,
-              padding: 14,
-              lineHeight: 1.6,
-              marginBottom: 18,
-            }}
-          >
-            질문 예시를 누르면 바로 상담을 시작할 수 있어요.
+          <div className="hidden rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 md:block">
+            MD 자료 기반 상담
           </div>
+        </header>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                onClick={() => sendMessage(s)}
-                disabled={loading}
-                style={{
-                  textAlign: "left",
-                  padding: "13px 14px",
-                  borderRadius: 16,
-                  border: "1px solid #e2e8f0",
-                  background: "white",
-                  color: "#1e293b",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  fontSize: 14,
-                  opacity: loading ? 0.55 : 1,
-                  boxShadow: "0 6px 20px rgba(15,23,42,0.04)",
-                }}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </aside>
+        <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
+          <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-black text-slate-700">추천 질문</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              아래 질문을 누르면 바로 답변을 확인할 수 있어요.
+            </p>
 
-        <section
-          style={{
-            background: "rgba(255,255,255,0.88)",
-            border: "1px solid rgba(148,163,184,0.25)",
-            borderRadius: 28,
-            height: "calc(100vh - 48px)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            boxShadow: "0 24px 70px rgba(15,23,42,0.10)",
-          }}
-        >
-          <header
-            style={{
-              padding: "18px 24px",
-              borderBottom: "1px solid #e2e8f0",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: "rgba(248,250,252,0.92)",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>상담 채팅</div>
-              <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>
-                짧게 물어봐도 괜찮아요. 예: “경영학과”, “미적분Ⅱ”
+            <div className="mt-5 flex flex-col gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => sendMessage(s)}
+                  disabled={loading}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-slate-900 p-4 text-white">
+              <div className="text-sm font-black">사용 팁</div>
+              <p className="mt-2 text-xs leading-5 text-slate-300">
+                “학과명”, “과목명”, “대학+학과”처럼 짧게 입력해도 됩니다.
+              </p>
+            </div>
+          </aside>
+
+          <section className="flex min-h-[72vh] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <div className="text-base font-black">상담 채팅</div>
+              <div className="text-xs text-slate-500">
+                답변은 자료 기반으로 정리되며, 필요한 경우 일반 설명이 보완됩니다.
               </div>
             </div>
 
-            <div
-              style={{
-                fontSize: 13,
-                color: "#1d4ed8",
-                background: "#dbeafe",
-                border: "1px solid #bfdbfe",
-                padding: "8px 12px",
-                borderRadius: 999,
-                fontWeight: 700,
-              }}
-            >
-              MD 자료 기반
-            </div>
-          </header>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: 26 }}>
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: m.role === "user" ? "flex-end" : "flex-start",
-                  marginBottom: 18,
-                }}
-              >
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6">
+              {messages.map((m, i) => (
                 <div
-                  style={{
-                    maxWidth: m.role === "user" ? "64%" : "72%",
-                    padding: "16px 18px",
-                    borderRadius:
-                      m.role === "user"
-                        ? "22px 22px 6px 22px"
-                        : "22px 22px 22px 6px",
-                    background:
-                      m.role === "user"
-                        ? "linear-gradient(135deg, #2563eb, #7c3aed)"
-                        : "#f8fafc",
-                    color: m.role === "user" ? "white" : "#0f172a",
-                    border: m.role === "assistant" ? "1px solid #e2e8f0" : "none",
-                    lineHeight: 1.85,
-                    fontSize: 15.5,
-                    boxShadow:
-                      m.role === "user"
-                        ? "0 14px 32px rgba(37,99,235,0.22)"
-                        : "0 12px 30px rgba(15,23,42,0.06)",
-                  }}
+                  key={i}
+                  className={`mb-5 flex ${
+                    m.role === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
                   <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      marginBottom: 8,
-                      color: m.role === "user" ? "rgba(255,255,255,0.78)" : "#64748b",
-                    }}
+                    className={`max-w-[78%] rounded-3xl px-5 py-4 text-[15px] leading-8 shadow-sm ${
+                      m.role === "user"
+                        ? "rounded-br-md bg-blue-600 text-white"
+                        : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
+                    }`}
                   >
-                    {m.role === "user" ? "나" : "AI 상담사"}
-                  </div>
+                    <div
+                      className={`mb-2 text-xs font-black ${
+                        m.role === "user" ? "text-blue-100" : "text-slate-400"
+                      }`}
+                    >
+                      {m.role === "user" ? "나" : "AI 상담사"}
+                    </div>
 
-                  <div className="markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.content}
-                    </ReactMarkdown>
+                    <div className="markdown-body">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {loading && (
-              <div
-                style={{
-                  display: "inline-flex",
-                  gap: 8,
-                  alignItems: "center",
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: "13px 16px",
-                  borderRadius: 18,
-                  color: "#64748b",
-                  fontSize: 14,
-                }}
-              >
-                자료 확인 중...
-              </div>
-            )}
+              {loading && (
+                <div className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
+                  자료 확인 중...
+                </div>
+              )}
 
-            <div ref={bottomRef} />
-          </div>
-
-          <footer
-            style={{
-              padding: 18,
-              borderTop: "1px solid #e2e8f0",
-              background: "rgba(248,250,252,0.95)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                background: "white",
-                border: "1px solid #cbd5e1",
-                borderRadius: 20,
-                padding: 10,
-                boxShadow: "0 10px 30px rgba(15,23,42,0.06)",
-              }}
-            >
-              <input
-                value={input}
-                disabled={loading}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") sendMessage();
-                }}
-                placeholder="예: 컴퓨터공학과 가려면 어떤 과목 들어야 해?"
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  fontSize: 15,
-                  padding: "12px 14px",
-                  color: "#0f172a",
-                  background: "transparent",
-                }}
-              />
-
-              <button
-                onClick={() => sendMessage()}
-                disabled={loading}
-                style={{
-                  border: "none",
-                  borderRadius: 15,
-                  padding: "0 24px",
-                  background: loading ? "#94a3b8" : "#2563eb",
-                  color: "white",
-                  fontWeight: 900,
-                  cursor: loading ? "not-allowed" : "pointer",
-                }}
-              >
-                {loading ? "대기" : "전송"}
-              </button>
+              <div ref={bottomRef} />
             </div>
-          </footer>
-        </section>
+
+            <footer className="border-t border-slate-200 bg-white p-4">
+              <div className="flex gap-3 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm">
+                <input
+                  value={input}
+                  disabled={loading}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") sendMessage();
+                  }}
+                  placeholder="예: 컴퓨터공학과 가려면 어떤 과목 들어야 해?"
+                  className="flex-1 bg-transparent px-4 py-3 text-sm outline-none"
+                />
+
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={loading}
+                  className="rounded-xl bg-slate-900 px-6 text-sm font-black text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {loading ? "대기" : "전송"}
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
       </div>
 
       <style jsx global>{`
@@ -359,18 +198,19 @@ export default function Home() {
         }
 
         .markdown-body li {
-          margin: 5px 0;
+          margin: 4px 0;
         }
 
         .markdown-body strong {
-          font-weight: 800;
+          font-weight: 900;
         }
 
         .markdown-body h1,
         .markdown-body h2,
         .markdown-body h3 {
           font-size: 16px;
-          margin: 14px 0 8px 0;
+          font-weight: 900;
+          margin: 12px 0 8px 0;
         }
 
         .markdown-body table {
@@ -378,8 +218,6 @@ export default function Home() {
           border-collapse: collapse;
           margin: 12px 0;
           font-size: 14px;
-          overflow: hidden;
-          border-radius: 12px;
         }
 
         .markdown-body th,
@@ -391,22 +229,7 @@ export default function Home() {
 
         .markdown-body th {
           background: #eff6ff;
-          font-weight: 800;
-        }
-
-        @media (max-width: 900px) {
-          main > div {
-            grid-template-columns: 1fr !important;
-          }
-
-          aside {
-            position: static !important;
-            height: auto !important;
-          }
-
-          section {
-            height: 75vh !important;
-          }
+          font-weight: 900;
         }
       `}</style>
     </main>
