@@ -1,70 +1,71 @@
-export function normalize(text: string) {
+import fs from "fs";
+import path from "path";
+
+const DATA_DIR = path.join(process.cwd(), "data");
+
+function normalize(text: string) {
   return text
     .toLowerCase()
     .replace(/\s+/g, " ")
-    .replace(/[?!.]/g, " ")
     .trim();
 }
 
-export function splitSections(doc: string) {
-  return doc
-    .split(/\n(?=#{1,4}\s|---|\*\*[^*]+\*\*)/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 40);
+function splitMarkdown(content: string) {
+  return content
+    .split(/\n#{1,3}\s/)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
-export function searchRelevant(query: string, doc: string, limit = 8) {
-  const q = normalize(query);
-  const words = q.split(" ").filter((w) => w.length >= 2);
-  const sections = splitSections(doc);
+function readMarkdownFiles() {
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((file) => file.endsWith(".md"));
 
-  return sections
-    .map((section) => {
-      const text = normalize(section);
-      const firstLine = normalize(section.split("\n")[0] || "");
+  let chunks: string[] = [];
 
-      let score = 0;
+  for (const file of files) {
+    const filePath = path.join(DATA_DIR, file);
 
-      if (firstLine.includes(q)) score += 100;
-      if (text.includes(q)) score += 50;
+    const content = fs.readFileSync(filePath, "utf-8");
 
-      for (const word of words) {
-        if (firstLine.includes(word)) score += 20;
-        if (text.includes(word)) score += 5;
-      }
+    const sections = splitMarkdown(content);
 
-      return { section, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((x) => x.section)
-    .join("\n\n---\n\n");
-}
-
-export function extractOpenedSubjects(subjectDoc: string) {
-  const subjects = new Set<string>();
-
-  const boldMatches = subjectDoc.matchAll(/\*\*([^*\n]+)\*\*/g);
-
-  for (const match of boldMatches) {
-    const name = match[1].trim();
-
-    if (
-      name.length <= 20 &&
-      !name.includes(":") &&
-      !name.includes("추천") &&
-      !name.includes("관련") &&
-      !name.includes("핵심") &&
-      !name.includes("소개")
-    ) {
-      subjects.add(name);
-    }
+    chunks.push(...sections);
   }
 
-  return Array.from(subjects);
+  return chunks;
 }
 
-export function filterSubjectsFromText(text: string, allowedSubjects: string[]) {
-  return allowedSubjects.filter((subject) => text.includes(subject));
+export function searchDocuments(query: string) {
+  const chunks = readMarkdownFiles();
+
+  const q = normalize(query);
+
+  const words = q
+    .split(" ")
+    .filter((w) => w.length >= 2);
+
+  const scored = chunks.map((chunk) => {
+    const text = normalize(chunk);
+
+    let score = 0;
+
+    if (text.includes(q)) score += 100;
+
+    for (const word of words) {
+      if (text.includes(word)) score += 10;
+    }
+
+    return {
+      text: chunk,
+      score,
+    };
+  });
+
+  return scored
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map((x) => x.text);
 }
