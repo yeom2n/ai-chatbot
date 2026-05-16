@@ -29,7 +29,6 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mobileView, setMobileView] = useState(false);
-  const [hasAsked, setHasAsked] = useState(false);
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -42,8 +41,6 @@ export default function Home() {
   async function sendMessage(text?: string) {
     const question = text || input;
     if (!question.trim() || loading) return;
-
-    setHasAsked(true);
 
     const updatedMessages: Message[] = [
       ...messages,
@@ -130,7 +127,9 @@ export default function Home() {
 
         <div
           className={`grid min-h-0 flex-1 ${
-            mobileView ? "grid-cols-1" : "grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]"
+            mobileView
+              ? "grid-cols-1"
+              : "grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]"
           }`}
         >
           {!mobileView && (
@@ -221,7 +220,7 @@ export default function Home() {
             </div>
 
             <footer className="shrink-0 border-t border-slate-200 bg-white p-3">
-              {mobileView && !hasAsked && (
+              {mobileView && (
                 <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
                   {suggestions.slice(0, 4).map((s) => (
                     <button
