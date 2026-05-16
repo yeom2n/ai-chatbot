@@ -1,9 +1,4 @@
-type SearchResult = {
-  section: string;
-  score: number;
-};
-
-function normalize(text: string) {
+export function normalize(text: string) {
   return text
     .toLowerCase()
     .replace(/\s+/g, " ")
@@ -11,43 +6,65 @@ function normalize(text: string) {
     .trim();
 }
 
-function getKeywords(query: string) {
-  return normalize(query)
-    .split(" ")
-    .filter((word) => word.length >= 2);
+export function splitSections(doc: string) {
+  return doc
+    .split(/\n(?=#{1,4}\s|---|\*\*[^*]+\*\*)/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 40);
 }
 
-export function searchRelevant(query: string, docs: string) {
+export function searchRelevant(query: string, doc: string, limit = 8) {
   const q = normalize(query);
-  const keywords = getKeywords(query);
+  const words = q.split(" ").filter((w) => w.length >= 2);
+  const sections = splitSections(doc);
 
-  const sections = docs
-    .split(/\n(?=#{1,4}\s|####\s|\*\*.+\*\*)/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 30);
+  return sections
+    .map((section) => {
+      const text = normalize(section);
+      const firstLine = normalize(section.split("\n")[0] || "");
 
-  const results: SearchResult[] = sections.map((section) => {
-    const text = normalize(section);
-    const firstLine = normalize(section.split("\n")[0] || "");
+      let score = 0;
 
-    let score = 0;
+      if (firstLine.includes(q)) score += 100;
+      if (text.includes(q)) score += 50;
 
-    // 제목에 질문이 직접 들어가면 강한 가중치
-    if (firstLine.includes(q)) score += 80;
-    if (text.includes(q)) score += 40;
+      for (const word of words) {
+        if (firstLine.includes(word)) score += 20;
+        if (text.includes(word)) score += 5;
+      }
 
-    for (const word of keywords) {
-      if (firstLine.includes(word)) score += 20;
-      if (text.includes(word)) score += 5;
-    }
-
-    return { section, score };
-  });
-
-  const filtered = results
-    .filter((r) => r.score >= 10)
+      return { section, score };
+    })
+    .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .slice(0, limit)
+    .map((x) => x.section)
+    .join("\n\n---\n\n");
+}
 
-  return filtered.map((r) => r.section).join("\n\n---\n\n");
+export function extractOpenedSubjects(subjectDoc: string) {
+  const subjects = new Set<string>();
+
+  const boldMatches = subjectDoc.matchAll(/\*\*([^*\n]+)\*\*/g);
+
+  for (const match of boldMatches) {
+    const name = match[1].trim();
+
+    if (
+      name.length <= 20 &&
+      !name.includes(":") &&
+      !name.includes("추천") &&
+      !name.includes("관련") &&
+      !name.includes("핵심") &&
+      !name.includes("소개")
+    ) {
+      subjects.add(name);
+    }
+  }
+
+  return Array.from(subjects);
+}
+
+export function filterSubjectsFromText(text: string, allowedSubjects: string[]) {
+  return allowedSubjects.filter((subject) => text.includes(subject));
 }
