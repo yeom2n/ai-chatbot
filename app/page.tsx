@@ -10,13 +10,12 @@ type Message = {
 };
 
 const suggestions = [
-  "컴퓨터공학과",
-  "경영학과",
-  "5등급제가 뭐야?",
-  "고교학점제가 뭐야?",
-  "물리학",
-  "생명과학",
-
+  "컴퓨터공학과 과목 추천",
+  "경영학과는 뭘 배워?",
+  "미적분Ⅱ는 어떤 과목이야?",
+  "중앙대 소프트웨어학부 권장과목",
+  "디자인 계열 추천 과목",
+  "간호학과 선택과목 추천",
 ];
 
 export default function Home() {
@@ -25,7 +24,7 @@ export default function Home() {
     {
       role: "assistant",
       content:
-        "안녕하세요. 진로, 학과, 선택과목에 대해 질문해보세요.\n자료를 참고해서 핵심 위주로 정리해드릴게요.",
+        "안녕하세요. 운양고 선택과목 안내 챗봇입니다.\n진로, 학과, 과목명을 입력하면 자료를 바탕으로 정리해드릴게요.",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -54,18 +53,12 @@ export default function Home() {
 
       setMessages([
         ...updated,
-        {
-          role: "assistant",
-          content: data.reply || "답변을 생성하지 못했어요.",
-        },
+        { role: "assistant", content: data.reply || "답변을 생성하지 못했어요." },
       ]);
     } catch {
       setMessages([
         ...updated,
-        {
-          role: "assistant",
-          content: "오류가 발생했어요. 서버 상태를 확인해주세요.",
-        },
+        { role: "assistant", content: "서버 오류가 발생했어요." },
       ]);
     } finally {
       setLoading(false);
@@ -77,8 +70,8 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, #26345f 0, #111827 35%, #080b12 100%)",
-        color: "#f8fafc",
+          "linear-gradient(135deg, #eef2ff 0%, #f8fafc 45%, #e0f2fe 100%)",
+        color: "#0f172a",
         fontFamily:
           "Pretendard, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
         padding: 24,
@@ -89,18 +82,17 @@ export default function Home() {
           maxWidth: 1180,
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: "320px 1fr",
-          gap: 24,
+          gridTemplateColumns: "300px 1fr",
+          gap: 22,
         }}
       >
-        {/* 왼쪽 패널 */}
         <aside
           style={{
-            background: "rgba(15, 23, 42, 0.82)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.82)",
+            border: "1px solid rgba(148,163,184,0.28)",
             borderRadius: 28,
             padding: 24,
-            boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
+            boxShadow: "0 24px 70px rgba(15,23,42,0.10)",
             height: "calc(100vh - 48px)",
             position: "sticky",
             top: 24,
@@ -108,10 +100,11 @@ export default function Home() {
         >
           <div
             style={{
-              width: 54,
-              height: 54,
+              width: 56,
+              height: 56,
               borderRadius: 18,
-              background: "linear-gradient(135deg, #60a5fa, #8b5cf6)",
+              background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+              color: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -122,41 +115,41 @@ export default function Home() {
             🎓
           </div>
 
-          <h1 style={{ fontSize: 28, lineHeight: 1.25, margin: 0 }}>
-            AI 진로·과목
+          <h1 style={{ fontSize: 27, lineHeight: 1.25, margin: 0 }}>
+            운양고
             <br />
-            설계 도우미
+            선택과목 챗봇
           </h1>
 
           <p
             style={{
-              color: "#aab3c5",
+              color: "#64748b",
               fontSize: 14,
               lineHeight: 1.7,
               marginTop: 14,
-              marginBottom: 26,
+              marginBottom: 22,
             }}
           >
-            2022 개정 교육과정, 대학 권장과목, 학교 선택과목 자료를 바탕으로
-            진로와 과목 선택을 도와줍니다.
+            학과, 진로, 과목명을 입력하면 2026 선택교과목 자료를 바탕으로
+            보기 쉽게 정리합니다.
           </p>
 
           <div
             style={{
-              padding: 14,
-              borderRadius: 18,
-              background: "rgba(96,165,250,0.10)",
-              border: "1px solid rgba(96,165,250,0.18)",
-              marginBottom: 22,
               fontSize: 13,
-              color: "#cbd5e1",
+              color: "#475569",
+              background: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              borderRadius: 18,
+              padding: 14,
               lineHeight: 1.6,
+              marginBottom: 18,
             }}
           >
-            질문 예시를 누르거나 직접 입력해보세요.
+            질문 예시를 누르면 바로 상담을 시작할 수 있어요.
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {suggestions.map((s) => (
               <button
                 key={s}
@@ -166,12 +159,13 @@ export default function Home() {
                   textAlign: "left",
                   padding: "13px 14px",
                   borderRadius: 16,
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(255,255,255,0.045)",
-                  color: "#e5e7eb",
+                  border: "1px solid #e2e8f0",
+                  background: "white",
+                  color: "#1e293b",
                   cursor: loading ? "not-allowed" : "pointer",
                   fontSize: 14,
                   opacity: loading ? 0.55 : 1,
+                  boxShadow: "0 6px 20px rgba(15,23,42,0.04)",
                 }}
               >
                 {s}
@@ -180,104 +174,98 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* 채팅 영역 */}
         <section
           style={{
-            background: "rgba(15, 23, 42, 0.72)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.88)",
+            border: "1px solid rgba(148,163,184,0.25)",
             borderRadius: 28,
             height: "calc(100vh - 48px)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
+            boxShadow: "0 24px 70px rgba(15,23,42,0.10)",
           }}
         >
           <header
             style={{
-              padding: "20px 24px",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              padding: "18px 24px",
+              borderBottom: "1px solid #e2e8f0",
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
+              alignItems: "center",
+              background: "rgba(248,250,252,0.92)",
             }}
           >
             <div>
               <div style={{ fontSize: 18, fontWeight: 800 }}>상담 채팅</div>
-              <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-                질문은 짧게 입력해도 괜찮아요.
+              <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>
+                짧게 물어봐도 괜찮아요. 예: “경영학과”, “미적분Ⅱ”
               </div>
             </div>
 
             <div
               style={{
                 fontSize: 13,
-                color: "#cbd5e1",
-                background: "rgba(34,197,94,0.12)",
-                border: "1px solid rgba(34,197,94,0.2)",
+                color: "#1d4ed8",
+                background: "#dbeafe",
+                border: "1px solid #bfdbfe",
                 padding: "8px 12px",
                 borderRadius: 999,
+                fontWeight: 700,
               }}
             >
-              PDF 기반 응답
+              MD 자료 기반
             </div>
           </header>
 
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: 24,
-            }}
-          >
+          <div style={{ flex: 1, overflowY: "auto", padding: 26 }}>
             {messages.map((m, i) => (
               <div
                 key={i}
                 style={{
                   display: "flex",
-                  justifyContent:
-                    m.role === "user" ? "flex-end" : "flex-start",
+                  justifyContent: m.role === "user" ? "flex-end" : "flex-start",
                   marginBottom: 18,
                 }}
               >
                 <div
                   style={{
-                    maxWidth: m.role === "user" ? "70%" : "78%",
-                    padding: "15px 18px",
+                    maxWidth: m.role === "user" ? "64%" : "72%",
+                    padding: "16px 18px",
                     borderRadius:
                       m.role === "user"
-                        ? "20px 20px 6px 20px"
-                        : "20px 20px 20px 6px",
+                        ? "22px 22px 6px 22px"
+                        : "22px 22px 22px 6px",
                     background:
                       m.role === "user"
-                        ? "linear-gradient(135deg, #4f7cff, #7c5cff)"
-                        : "rgba(30, 41, 59, 0.95)",
-                    color: "#f8fafc",
-                    lineHeight: 1.75,
+                        ? "linear-gradient(135deg, #2563eb, #7c3aed)"
+                        : "#f8fafc",
+                    color: m.role === "user" ? "white" : "#0f172a",
+                    border: m.role === "assistant" ? "1px solid #e2e8f0" : "none",
+                    lineHeight: 1.85,
                     fontSize: 15.5,
                     boxShadow:
                       m.role === "user"
-                        ? "0 12px 30px rgba(79,124,255,0.25)"
-                        : "0 12px 30px rgba(0,0,0,0.20)",
+                        ? "0 14px 32px rgba(37,99,235,0.22)"
+                        : "0 12px 30px rgba(15,23,42,0.06)",
                   }}
                 >
                   <div
                     style={{
                       fontSize: 12,
-                      color:
-                        m.role === "user"
-                          ? "rgba(255,255,255,0.75)"
-                          : "#9ca3af",
-                      marginBottom: 6,
                       fontWeight: 800,
+                      marginBottom: 8,
+                      color: m.role === "user" ? "rgba(255,255,255,0.78)" : "#64748b",
                     }}
                   >
                     {m.role === "user" ? "나" : "AI 상담사"}
                   </div>
 
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {m.content}
-                  </ReactMarkdown>
+                  <div className="markdown-body">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </div>
             ))}
@@ -286,17 +274,17 @@ export default function Home() {
               <div
                 style={{
                   display: "inline-flex",
-                  alignItems: "center",
                   gap: 8,
-                  background: "rgba(30,41,59,0.9)",
-                  padding: "12px 16px",
-                  borderRadius: 16,
-                  color: "#cbd5e1",
+                  alignItems: "center",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  padding: "13px 16px",
+                  borderRadius: 18,
+                  color: "#64748b",
                   fontSize: 14,
                 }}
               >
-                <span>자료를 확인하고 있어요</span>
-                <span>...</span>
+                자료 확인 중...
               </div>
             )}
 
@@ -306,18 +294,19 @@ export default function Home() {
           <footer
             style={{
               padding: 18,
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(2,6,23,0.45)",
+              borderTop: "1px solid #e2e8f0",
+              background: "rgba(248,250,252,0.95)",
             }}
           >
             <div
               style={{
                 display: "flex",
                 gap: 10,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
+                background: "white",
+                border: "1px solid #cbd5e1",
                 borderRadius: 20,
                 padding: 10,
+                boxShadow: "0 10px 30px rgba(15,23,42,0.06)",
               }}
             >
               <input
@@ -327,15 +316,15 @@ export default function Home() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") sendMessage();
                 }}
-                placeholder="예: 컴퓨터공학과 가려면 어떤 과목을 골라야 해?"
+                placeholder="예: 컴퓨터공학과 가려면 어떤 과목 들어야 해?"
                 style={{
                   flex: 1,
-                  background: "transparent",
                   border: "none",
                   outline: "none",
-                  color: "white",
                   fontSize: 15,
                   padding: "12px 14px",
+                  color: "#0f172a",
+                  background: "transparent",
                 }}
               />
 
@@ -344,12 +333,10 @@ export default function Home() {
                 disabled={loading}
                 style={{
                   border: "none",
-                  borderRadius: 16,
+                  borderRadius: 15,
                   padding: "0 24px",
-                  background: loading
-                    ? "#64748b"
-                    : "linear-gradient(135deg, #ffffff, #dbeafe)",
-                  color: "#0f172a",
+                  background: loading ? "#94a3b8" : "#2563eb",
+                  color: "white",
                   fontWeight: 900,
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
@@ -360,6 +347,68 @@ export default function Home() {
           </footer>
         </section>
       </div>
+
+      <style jsx global>{`
+        .markdown-body p {
+          margin: 0 0 10px 0;
+        }
+
+        .markdown-body ul {
+          margin: 6px 0 14px 0;
+          padding-left: 20px;
+        }
+
+        .markdown-body li {
+          margin: 5px 0;
+        }
+
+        .markdown-body strong {
+          font-weight: 800;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3 {
+          font-size: 16px;
+          margin: 14px 0 8px 0;
+        }
+
+        .markdown-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          font-size: 14px;
+          overflow: hidden;
+          border-radius: 12px;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+          border: 1px solid #cbd5e1;
+          padding: 9px 10px;
+          text-align: left;
+        }
+
+        .markdown-body th {
+          background: #eff6ff;
+          font-weight: 800;
+        }
+
+        @media (max-width: 900px) {
+          main > div {
+            grid-template-columns: 1fr !important;
+          }
+
+          aside {
+            position: static !important;
+            height: auto !important;
+          }
+
+          section {
+            height: 75vh !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
