@@ -29,7 +29,6 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mobileView, setMobileView] = useState(false);
-
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -61,10 +60,7 @@ export default function Home() {
 
       setMessages([
         ...updatedMessages,
-        {
-          role: "assistant",
-          content: data.reply || "답변을 생성하지 못했어요.",
-        },
+        { role: "assistant", content: data.reply || "답변을 생성하지 못했어요." },
       ]);
     } catch {
       setMessages([
@@ -79,65 +75,58 @@ export default function Home() {
   return (
     <main className="fixed inset-0 overflow-hidden bg-[#f3f6fb] text-slate-900">
       <div
-        className={`mx-auto flex h-full flex-col transition-all duration-300 ${
-          mobileView ? "max-w-full px-3 py-3" : "max-w-7xl px-4 py-5"
+        className={`mx-auto flex h-full flex-col ${
+          mobileView ? "max-w-full p-0" : "max-w-7xl px-4 py-5"
         }`}
       >
-        <header
-          className={`mb-4 flex shrink-0 items-center justify-between rounded-3xl border border-slate-200 bg-white shadow-sm ${
-            mobileView ? "px-4 py-4" : "px-6 py-5"
-          }`}
-        >
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-blue-600">
-              Unyang High School
+        {!mobileView && (
+          <header className="mb-5 flex shrink-0 items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+            <div>
+              <div className="text-sm font-bold text-blue-600">
+                Unyang High School
+              </div>
+              <h1 className="mt-1 text-2xl font-black">선택과목 상담 챗봇</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                2022 개정 교육과정 기반 선택과목 안내
+              </p>
             </div>
-            <h1
-              className={`mt-1 font-black ${
-                mobileView ? "text-xl" : "text-2xl"
-              }`}
-            >
-              선택과목 상담 챗봇
-            </h1>
-            <p
-              className={`mt-1 text-slate-500 ${
-                mobileView ? "text-xs" : "text-sm"
-              }`}
-            >
-              2022 개정 교육과정 기반 선택과목 안내
-            </p>
-          </div>
 
-          <div className="ml-3 flex shrink-0 gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMobileView(false)}
+                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+              >
+                PC
+              </button>
+              <button
+                onClick={() => setMobileView(true)}
+                className="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
+              >
+                모바일
+              </button>
+            </div>
+          </header>
+        )}
+
+        {mobileView && (
+          <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+            <div>
+              <div className="text-sm font-black">운양고 선택과목 챗봇</div>
+              <div className="text-xs text-slate-500">모바일 채팅 모드</div>
+            </div>
+
             <button
               onClick={() => setMobileView(false)}
-              className={`rounded-full px-4 py-2 text-sm font-bold ${
-                !mobileView
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-600"
-              }`}
+              className="rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white"
             >
               PC
             </button>
-
-            <button
-              onClick={() => setMobileView(true)}
-              className={`rounded-full px-4 py-2 text-sm font-bold ${
-                mobileView
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              모바일
-            </button>
-          </div>
-        </header>
+          </header>
+        )}
 
         <div
-          className={`grid min-h-0 flex-1 gap-4 ${
-            mobileView
-              ? "grid-cols-1"
-              : "grid-cols-1 lg:grid-cols-[280px_1fr]"
+          className={`grid min-h-0 flex-1 ${
+            mobileView ? "grid-cols-1" : "grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]"
           }`}
         >
           {!mobileView && (
@@ -150,47 +139,28 @@ export default function Home() {
                     key={s}
                     onClick={() => sendMessage(s)}
                     disabled={loading}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:opacity-50"
                   >
                     {s}
                   </button>
                 ))}
-              </div>
-
-              <div className="mt-6 rounded-2xl bg-slate-900 p-4 text-white">
-                <div className="text-sm font-black">TIP</div>
-                <p className="mt-2 text-xs leading-5 text-slate-300">
-                  “간호학과 추천 과목”, “미적분Ⅱ”, “컴퓨터공학과”처럼 짧게
-                  입력해도 됩니다.
-                </p>
               </div>
             </aside>
           )}
 
-          <section className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div
-              className={`shrink-0 border-b border-slate-200 ${
-                mobileView ? "px-4 py-3" : "px-6 py-4"
-              }`}
-            >
-              <div className="text-base font-black">상담 채팅</div>
-              <div className="text-xs text-slate-500">
-                자료 기반으로 선택과목 정보를 안내합니다.
-              </div>
-            </div>
-
-            {mobileView && (
-              <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-slate-100 px-3 py-2">
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => sendMessage(s)}
-                    disabled={loading}
-                    className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
-                  >
-                    {s}
-                  </button>
-                ))}
+          <section
+            className={`flex min-h-0 flex-col overflow-hidden bg-white ${
+              mobileView
+                ? "rounded-none border-0"
+                : "rounded-3xl border border-slate-200 shadow-sm"
+            }`}
+          >
+            {!mobileView && (
+              <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+                <div className="text-base font-black">상담 채팅</div>
+                <div className="text-xs text-slate-500">
+                  자료 기반으로 선택과목 정보를 안내합니다.
+                </div>
               </div>
             )}
 
@@ -209,10 +179,12 @@ export default function Home() {
                 >
                   <div
                     className={`rounded-3xl shadow-sm ${
-                      mobileView ? "max-w-[96%] px-4 py-3" : "max-w-[78%] px-5 py-4"
+                      mobileView
+                        ? "max-w-[88%] px-4 py-3 text-[15px] leading-7"
+                        : "max-w-[78%] px-5 py-4 text-[15px] leading-8"
                     } ${
                       m.role === "assistant"
-                        ? "max-h-[56vh] overflow-y-auto"
+                        ? "max-h-[65vh] overflow-y-auto"
                         : ""
                     } ${
                       m.role === "user"
@@ -228,11 +200,7 @@ export default function Home() {
                       {m.role === "user" ? "나" : "AI 상담사"}
                     </div>
 
-                    <div
-                      className={`markdown-body ${
-                        mobileView ? "text-[14.5px] leading-7" : "text-[15px] leading-8"
-                      }`}
-                    >
+                    <div className="markdown-body">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content}
                       </ReactMarkdown>
@@ -248,11 +216,7 @@ export default function Home() {
               )}
             </div>
 
-            <footer
-              className={`shrink-0 border-t border-slate-200 bg-white ${
-                mobileView ? "p-3" : "p-4"
-              }`}
-            >
+            <footer className="shrink-0 border-t border-slate-200 bg-white p-3">
               <div className="flex gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm">
                 <input
                   value={input}
@@ -261,7 +225,7 @@ export default function Home() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") sendMessage();
                   }}
-                  placeholder="예: 간호학과 선택과목 추천"
+                  placeholder="질문을 입력하세요"
                   className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm outline-none"
                 />
 
@@ -299,25 +263,6 @@ export default function Home() {
         }
 
         .markdown-body strong {
-          font-weight: 900;
-        }
-
-        .markdown-body table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 12px 0;
-          font-size: 14px;
-        }
-
-        .markdown-body th,
-        .markdown-body td {
-          border: 1px solid #cbd5e1;
-          padding: 9px 10px;
-          text-align: left;
-        }
-
-        .markdown-body th {
-          background: #eff6ff;
           font-weight: 900;
         }
       `}</style>
