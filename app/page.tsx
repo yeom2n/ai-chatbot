@@ -28,7 +28,6 @@ export default function Home() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [mobileView, setMobileView] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -36,20 +35,17 @@ export default function Home() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
       behavior: "smooth",
+      block: "end",
     });
-  }, [messages]);
+  }, [messages, loading]);
 
   async function sendMessage(text?: string) {
     const question = text || input;
-
     if (!question.trim() || loading) return;
 
-    const updatedMessages = [
+    const updatedMessages: Message[] = [
       ...messages,
-      {
-        role: "user" as const,
-        content: question,
-      },
+      { role: "user", content: question },
     ];
 
     setMessages(updatedMessages);
@@ -59,9 +55,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        body: JSON.stringify({
-          messages: updatedMessages,
-        }),
+        body: JSON.stringify({ messages: updatedMessages }),
       });
 
       const data = await res.json();
@@ -70,7 +64,7 @@ export default function Home() {
         ...updatedMessages,
         {
           role: "assistant",
-          content: data.reply,
+          content: data.reply || "답변을 생성하지 못했어요.",
         },
       ]);
     } catch {
@@ -87,22 +81,19 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f6fb] text-slate-900">
+    <main className="h-screen overflow-hidden bg-[#f3f6fb] text-slate-900">
       <div
-        className={`mx-auto flex min-h-screen flex-col px-4 py-5 transition-all duration-300 ${
+        className={`mx-auto flex h-screen flex-col px-4 py-5 transition-all duration-300 ${
           mobileView ? "max-w-[430px]" : "max-w-7xl"
         }`}
       >
-        {/* 상단 */}
-        <header className="mb-5 flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+        <header className="mb-5 flex shrink-0 items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
           <div>
             <div className="text-sm font-bold text-blue-600">
               Unyang High School
             </div>
 
-            <h1 className="mt-1 text-2xl font-black">
-              선택과목 상담 챗봇
-            </h1>
+            <h1 className="mt-1 text-2xl font-black">선택과목 상담 챗봇</h1>
 
             <p className="mt-1 text-sm text-slate-500">
               2022 개정 교육과정 기반 선택과목 안내
@@ -135,25 +126,23 @@ export default function Home() {
         </header>
 
         <div
-          className={`grid flex-1 gap-5 ${
+          className={`grid min-h-0 flex-1 gap-5 ${
             mobileView
               ? "grid-cols-1"
               : "grid-cols-1 lg:grid-cols-[280px_1fr]"
           }`}
         >
-          {/* 사이드 */}
           {!mobileView && (
-            <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-sm font-black text-slate-700">
-                추천 질문
-              </div>
+            <aside className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="text-sm font-black text-slate-700">추천 질문</div>
 
               <div className="mt-4 flex flex-col gap-2">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50"
+                    disabled={loading}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -164,16 +153,15 @@ export default function Home() {
                 <div className="text-sm font-black">TIP</div>
 
                 <p className="mt-2 text-xs leading-5 text-slate-300">
-                  “간호학과 추천 과목”, “미적분Ⅱ”, “컴퓨터공학과”
-                  처럼 짧게 입력해도 됩니다.
+                  “간호학과 추천 과목”, “미적분Ⅱ”, “컴퓨터공학과”처럼 짧게
+                  입력해도 됩니다.
                 </p>
               </div>
             </aside>
           )}
 
-          {/* 채팅 */}
-          <section className="flex min-h-[75vh] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-6 py-4">
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="shrink-0 border-b border-slate-200 px-6 py-4">
               <div className="text-base font-black">상담 채팅</div>
 
               <div className="text-xs text-slate-500">
@@ -181,14 +169,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 모바일 추천 버튼 */}
             {mobileView && (
-              <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-4 py-3">
+              <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-slate-100 px-4 py-3">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}
-                    className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700"
+                    disabled={loading}
+                    className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -196,15 +184,12 @@ export default function Home() {
               </div>
             )}
 
-            {/* 메시지 */}
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6">
               {messages.map((m, i) => (
                 <div
                   key={i}
                   className={`mb-5 flex ${
-                    m.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
+                    m.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   <div
@@ -218,9 +203,7 @@ export default function Home() {
                   >
                     <div
                       className={`mb-2 text-xs font-black ${
-                        m.role === "user"
-                          ? "text-blue-100"
-                          : "text-slate-400"
+                        m.role === "user" ? "text-blue-100" : "text-slate-400"
                       }`}
                     >
                       {m.role === "user" ? "나" : "AI 상담사"}
@@ -244,20 +227,17 @@ export default function Home() {
               <div ref={bottomRef} />
             </div>
 
-            {/* 입력창 */}
-            <footer className="border-t border-slate-200 bg-white p-4">
+            <footer className="shrink-0 border-t border-slate-200 bg-white p-4">
               <div className="flex gap-3 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm">
                 <input
                   value={input}
                   disabled={loading}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      sendMessage();
-                    }
+                    if (e.key === "Enter") sendMessage();
                   }}
                   placeholder="예: 간호학과 선택과목 추천"
-                  className="flex-1 bg-transparent px-4 py-3 text-sm outline-none"
+                  className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm outline-none"
                 />
 
                 <button
@@ -288,6 +268,25 @@ export default function Home() {
         }
 
         .markdown-body strong {
+          font-weight: 900;
+        }
+
+        .markdown-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          font-size: 14px;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+          border: 1px solid #cbd5e1;
+          padding: 9px 10px;
+          text-align: left;
+        }
+
+        .markdown-body th {
+          background: #eff6ff;
           font-weight: 900;
         }
       `}</style>
