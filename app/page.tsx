@@ -30,12 +30,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [mobileView, setMobileView] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
+    const el = scrollAreaRef.current;
+    if (!el) return;
+    el.scrollTo({
+      top: el.scrollHeight,
       behavior: "smooth",
-      block: "end",
     });
   }, [messages, loading]);
 
@@ -81,9 +83,9 @@ export default function Home() {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-[#f3f6fb] text-slate-900">
+    <main className="fixed inset-0 overflow-hidden bg-[#f3f6fb] text-slate-900">
       <div
-        className={`mx-auto flex h-screen flex-col px-4 py-5 transition-all duration-300 ${
+        className={`mx-auto flex h-full flex-col px-4 py-5 transition-all duration-300 ${
           mobileView ? "max-w-[430px]" : "max-w-7xl"
         }`}
       >
@@ -92,15 +94,13 @@ export default function Home() {
             <div className="text-sm font-bold text-blue-600">
               Unyang High School
             </div>
-
             <h1 className="mt-1 text-2xl font-black">선택과목 상담 챗봇</h1>
-
             <p className="mt-1 text-sm text-slate-500">
               2022 개정 교육과정 기반 선택과목 안내
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <button
               onClick={() => setMobileView(false)}
               className={`rounded-full px-4 py-2 text-sm font-bold ${
@@ -151,7 +151,6 @@ export default function Home() {
 
               <div className="mt-6 rounded-2xl bg-slate-900 p-4 text-white">
                 <div className="text-sm font-black">TIP</div>
-
                 <p className="mt-2 text-xs leading-5 text-slate-300">
                   “간호학과 추천 과목”, “미적분Ⅱ”, “컴퓨터공학과”처럼 짧게
                   입력해도 됩니다.
@@ -163,7 +162,6 @@ export default function Home() {
           <section className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="shrink-0 border-b border-slate-200 px-6 py-4">
               <div className="text-base font-black">상담 채팅</div>
-
               <div className="text-xs text-slate-500">
                 자료 기반으로 선택과목 정보를 안내합니다.
               </div>
@@ -184,7 +182,10 @@ export default function Home() {
               </div>
             )}
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6">
+            <div
+              ref={scrollAreaRef}
+              className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6"
+            >
               {messages.map((m, i) => (
                 <div
                   key={i}
@@ -195,6 +196,10 @@ export default function Home() {
                   <div
                     className={`rounded-3xl px-5 py-4 text-[15px] leading-8 shadow-sm ${
                       mobileView ? "max-w-[92%]" : "max-w-[78%]"
+                    } ${
+                      m.role === "assistant"
+                        ? "max-h-[56vh] overflow-y-auto"
+                        : ""
                     } ${
                       m.role === "user"
                         ? "rounded-br-md bg-blue-600 text-white"
@@ -223,8 +228,6 @@ export default function Home() {
                   답변 생성 중...
                 </div>
               )}
-
-              <div ref={bottomRef} />
             </div>
 
             <footer className="shrink-0 border-t border-slate-200 bg-white p-4">
@@ -254,6 +257,12 @@ export default function Home() {
       </div>
 
       <style jsx global>{`
+        html,
+        body {
+          height: 100%;
+          overflow: hidden;
+        }
+
         .markdown-body p {
           margin: 0 0 10px 0;
         }
