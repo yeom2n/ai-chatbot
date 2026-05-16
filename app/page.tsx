@@ -13,13 +13,14 @@ const suggestions = [
   "컴퓨터공학과 과목 추천",
   "경영학과는 뭘 배워?",
   "미적분Ⅱ는 어떤 과목이야?",
-  "디자인 계열 추천 과목",
   "간호학과 선택과목 추천",
+  "디자인 계열 추천 과목",
   "중앙대 소프트웨어학부 권장과목",
 ];
 
 export default function Home() {
   const [input, setInput] = useState("");
+  const [viewMode, setViewMode] = useState<"pc" | "mobile">("pc");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -65,10 +66,16 @@ export default function Home() {
     }
   };
 
+  const isMobile = viewMode === "mobile";
+
   return (
     <main className="min-h-screen bg-[#f4f7fb] text-slate-900">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-6">
-        <header className="mb-5 flex items-center justify-between rounded-3xl bg-white px-6 py-5 shadow-sm border border-slate-200">
+      <div
+        className={`mx-auto flex min-h-screen flex-col px-5 py-6 ${
+          isMobile ? "max-w-[430px]" : "max-w-7xl"
+        }`}
+      >
+        <header className="mb-5 flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
           <div>
             <div className="text-sm font-bold text-blue-600">Unyang High School</div>
             <h1 className="mt-1 text-2xl font-black tracking-tight">
@@ -79,46 +86,90 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="hidden rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 md:block">
-            MD 자료 기반 상담
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode("pc")}
+              className={`rounded-full px-4 py-2 text-sm font-black ${
+                viewMode === "pc"
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              PC
+            </button>
+            <button
+              onClick={() => setViewMode("mobile")}
+              className={`rounded-full px-4 py-2 text-sm font-black ${
+                viewMode === "mobile"
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              모바일
+            </button>
           </div>
         </header>
 
-        <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-black text-slate-700">추천 질문</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              아래 질문을 누르면 바로 답변을 확인할 수 있어요.
-            </p>
-
-            <div className="mt-5 flex flex-col gap-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendMessage(s)}
-                  disabled={loading}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-2xl bg-slate-900 p-4 text-white">
-              <div className="text-sm font-black">사용 팁</div>
-              <p className="mt-2 text-xs leading-5 text-slate-300">
-                “학과명”, “과목명”, “대학+학과”처럼 짧게 입력해도 됩니다.
+        <div
+          className={`grid flex-1 gap-5 ${
+            isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[280px_1fr]"
+          }`}
+        >
+          {!isMobile && (
+            <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-sm font-black text-slate-700">추천 질문</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                아래 질문을 누르면 바로 답변을 확인할 수 있어요.
               </p>
-            </div>
-          </aside>
 
-          <section className="flex min-h-[72vh] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+              <div className="mt-5 flex flex-col gap-2">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendMessage(s)}
+                    disabled={loading}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6 rounded-2xl bg-slate-900 p-4 text-white">
+                <div className="text-sm font-black">사용 팁</div>
+                <p className="mt-2 text-xs leading-5 text-slate-300">
+                  “학과명”, “과목명”, “대학+학과”처럼 짧게 입력해도 됩니다.
+                </p>
+              </div>
+            </aside>
+          )}
+
+          <section
+            className={`flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm ${
+              isMobile ? "min-h-[78vh]" : "min-h-[72vh]"
+            }`}
+          >
             <div className="border-b border-slate-200 px-6 py-4">
               <div className="text-base font-black">상담 채팅</div>
               <div className="text-xs text-slate-500">
                 답변은 자료 기반으로 정리되며, 필요한 경우 일반 설명이 보완됩니다.
               </div>
             </div>
+
+            {isMobile && (
+              <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-4 py-3">
+                {suggestions.slice(0, 4).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendMessage(s)}
+                    disabled={loading}
+                    className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50 px-5 py-6">
               {messages.map((m, i) => (
@@ -129,7 +180,9 @@ export default function Home() {
                   }`}
                 >
                   <div
-                    className={`max-w-[78%] rounded-3xl px-5 py-4 text-[15px] leading-8 shadow-sm ${
+                    className={`rounded-3xl px-5 py-4 text-[15px] leading-8 shadow-sm ${
+                      isMobile ? "max-w-[92%]" : "max-w-[78%]"
+                    } ${
                       m.role === "user"
                         ? "rounded-br-md bg-blue-600 text-white"
                         : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
@@ -170,7 +223,7 @@ export default function Home() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") sendMessage();
                   }}
-                  placeholder="예: 컴퓨터공학과 가려면 어떤 과목 들어야 해?"
+                  placeholder="예: 간호학과 선택과목 추천"
                   className="flex-1 bg-transparent px-4 py-3 text-sm outline-none"
                 />
 
