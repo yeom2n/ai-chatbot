@@ -10,35 +10,32 @@ function normalize(text: string) {
     .trim();
 }
 
-function splitMarkdown(content: string) {
-  return content
-    .split(/\n#{1,3}\s/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
-
 function readMarkdownFiles() {
   const files = fs
     .readdirSync(DATA_DIR)
     .filter((file) => file.endsWith(".md"));
 
-  let chunks: string[] = [];
+  let allSections: string[] = [];
 
   for (const file of files) {
     const filePath = path.join(DATA_DIR, file);
 
     const content = fs.readFileSync(filePath, "utf-8");
 
-    const sections = splitMarkdown(content);
+    // #### 기준으로 자르기
+    const sections = content
+      .split(/\n(?=####\s)/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-    chunks.push(...sections);
+    allSections.push(...sections);
   }
 
-  return chunks;
+  return allSections;
 }
 
 export function searchDocuments(query: string) {
-  const chunks = readMarkdownFiles();
+  const sections = readMarkdownFiles();
 
   const q = normalize(query);
 
@@ -46,19 +43,27 @@ export function searchDocuments(query: string) {
     .split(" ")
     .filter((w) => w.length >= 2);
 
-  const scored = chunks.map((chunk) => {
-    const text = normalize(chunk);
+  const scored = sections.map((section) => {
+    const text = normalize(section);
+
+    const title =
+      normalize(section.split("\n")[0] || "");
 
     let score = 0;
 
-    if (text.includes(q)) score += 100;
+    // 제목 완전 일치
+    if (title.includes(q)) score += 200;
+
+    // 내용 일치
+    if (text.includes(q)) score += 80;
 
     for (const word of words) {
+      if (title.includes(word)) score += 40;
       if (text.includes(word)) score += 10;
     }
 
     return {
-      text: chunk,
+      text: section,
       score,
     };
   });
@@ -66,6 +71,6 @@ export function searchDocuments(query: string) {
   return scored
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 6)
+    .slice(0, 5)
     .map((x) => x.text);
 }
