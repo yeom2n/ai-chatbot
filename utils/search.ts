@@ -3,164 +3,154 @@ import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
+export type SearchBuildResult = {
+  context: string;
+  mode: "major" | "subject" | "general" | "none";
+  foundTitle?: string;
+};
+
 type Section = {
   file: string;
+  level: number;
   title: string;
   text: string;
 };
 
 function normalize(text: string) {
-  return text.toLowerCase().replace(/\s+/g, " ").replace(/[?!.]/g, " ").trim();
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[?!.]/g, " ")
+    .trim();
 }
 
-function readSections(): Section[] {
+function readFiles() {
   if (!fs.existsSync(DATA_DIR)) return [];
 
-  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".md"));
+  return fs
+    .readdirSync(DATA_DIR)
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => ({
+      file,
+      content: fs.readFileSync(path.join(DATA_DIR, file), "utf-8"),
+    }));
+}
+
+function splitHeadingSections(file: string, content: string): Section[] {
+  const lines = content.split(/\r?\n/);
   const sections: Section[] = [];
 
-  for (const file of files) {
-    const content = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].match(/^(#{1,4})\s+(.+)$/);
+    if (!match) continue;
 
-    const parts = content
-      .split(/\n(?=#{1,4}\s)/g)
-      .map((x) => x.trim())
-      .filter((x) => x.length > 30);
+    const level = match[1].length;
+    const title = match[2].trim();
 
-    for (const part of parts) {
-      const first = part.split("\n")[0] || "";
-      const title = first.replace(/^#{1,4}\s*/, "").trim();
+    let end = lines.length;
+    for (let j = i + 1; j < lines.length; j++) {
+      const next = lines[j].match(/^(#{1,4})\s+(.+)$/);
+      if (next && next[1].length <= level) {
+        end = j;
+        break;
+      }
+    }
 
-      sections.push({ file, title, text: part });
+    const text = lines.slice(i, end).join("\n").trim();
+
+    if (text.length > 30) {
+      sections.push({ file, level, title, text });
     }
   }
 
   return sections;
 }
 
+function splitBoldSubjectSections(file: string, content: string): Section[] {
+  const parts = content
+    .split(/\n(?=\*\*[^*\n]+\*\*)/g)
+    .map((x) => x.trim())
+    .filter((x) => x.length > 30);
+
+  return parts
+    .map((text) => {
+      const first = text.split("\n")[0] || "";
+      const match = first.match(/^\*\*([^*\n]+)\*\*/);
+      if (!match) return null;
+
+      return {
+        file,
+        level: 5,
+        title: match[1].trim(),
+        text,
+      };
+    })
+    .filter(Boolean) as Section[];
+}
+
+function getAllSections() {
+  const files = readFiles();
+  const sections: Section[] = [];
+
+  for (const f of files) {
+    sections.push(...splitHeadingSections(f.file, f.content));
+    sections.push(...splitBoldSubjectSections(f.file, f.content));
+  }
+
+  return sections;
+}
+
 function isSubjectFile(file: string) {
-  return file.includes("교과") || file.includes("선택과목") || file.includes("subject");
+  return (
+    file.includes("교과") ||
+    file.includes("선택과목") ||
+    file.includes("subject") ||
+    file.includes("subjects")
+  );
 }
 
 function isMajorFile(file: string) {
-  return file.includes("학과안내") || file.includes("계열");
+  return file.includes("학과안내") || file.includes("계열_학과");
+}
+
+function extractTargetNames(query: string) {
+  const cleaned = query.replace(/[?!.]/g, " ");
+  const raw = cleaned.split(/\s+/).filter(Boolean);
+
+  const targets = raw.filter((word) =>
+    /(학과|학부|전공|계열|교육과|공학과|의예과|약학과|간호학과)$/.test(word)
+  );
+
+  return Array.from(new Set(targets));
 }
 
 function findMajorSection(query: string, sections: Section[]) {
-  const q = normalize(query);
-
+  const targets = extractTargetNames(query);
   const majorSections = sections.filter((s) => isMajorFile(s.file));
 
-  const exact = majorSections.find((s) => {
-    const title = normalize(s.title);
-    return title.length >= 3 && q.includes(title);
-  });
+  for (const target of targets) {
+    const nt = normalize(target);
 
-  if (exact) return exact;
+    const exact = majorSections.find((s) => normalize(s.title) === nt);
+    if (exact) return exact;
 
-  return majorSections
-    .map((s) => {
-      const title = normalize(s.title);
-      let score = 0;
+    const includes = majorSections.find((s) => normalize(s.title).includes(nt));
+    if (includes) return includes;
+  }
 
-      if (title.includes("학과") && q.includes(title.replace("학과", ""))) score += 500;
-      if (normalize(s.text).includes(q)) score += 200;
-
-      return { ...s, score };
-    })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)[0] || null;
+  return null;
 }
 
 function findSubjectSection(query: string, sections: Section[]) {
+  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
   const q = normalize(query);
-  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
 
-  return subjectSections.find((s) => {
-    const title = normalize(s.title);
-    return title.length >= 2 && q.includes(title);
-  }) || null;
+  const exact = subjectSections.find((s) => q.includes(normalize(s.title)));
+  if (exact) return exact;
+
+  return null;
 }
 
-function extractSubjectSectionsFromText(text: string, sections: Section[]) {
-  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
-
-  return subjectSections.filter((s) => {
-    if (s.title.length < 2) return false;
-    return text.includes(s.title);
-  });
-}
-
-function searchGeneral(query: string, sections: Section[], limit = 6) {
-  const words = normalize(query).split(" ").filter((w) => w.length >= 2);
-
+function getSubjectNames(sections: Section[]) {
   return sections
-    .map((s) => {
-      const text = normalize(s.text);
-      const title = normalize(s.title);
-      let score = 0;
-
-      for (const w of words) {
-        if (title.includes(w)) score += 80;
-        if (text.includes(w)) score += 15;
-      }
-
-      return { ...s, score };
-    })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-}
-
-export function buildContext(query: string) {
-  const sections = readSections();
-
-  const major = findMajorSection(query, sections);
-  const subject = findSubjectSection(query, sections);
-
-  const parts: string[] = [];
-
-  // 1순위: 학과 섹션
-  if (major) {
-    parts.push(`[학과 상세 안내]\n파일: ${major.file}\n제목: ${major.title}\n\n${major.text}`);
-
-    // 학과 섹션에 실제로 등장한 과목만 추가
-    const relatedSubjects = extractSubjectSectionsFromText(major.text, sections);
-
-    for (const s of relatedSubjects.slice(0, 10)) {
-      parts.push(`[관련 과목 정보]\n파일: ${s.file}\n제목: ${s.title}\n\n${s.text}`);
-    }
-
-    console.log("학과 섹션:", major.title);
-    console.log("추출 과목:", relatedSubjects.map((s) => s.title));
-
-    return {
-      context: parts.join("\n\n---\n\n").slice(0, 35000),
-      hasMajor: true,
-      hasSubject: Boolean(subject),
-    };
-  }
-
-  // 2순위: 과목 섹션
-  if (subject) {
-    parts.push(`[과목 상세 정보]\n파일: ${subject.file}\n제목: ${subject.title}\n\n${subject.text}`);
-
-    return {
-      context: parts.join("\n\n---\n\n").slice(0, 25000),
-      hasMajor: false,
-      hasSubject: true,
-    };
-  }
-
-  // 3순위: 일반 검색
-  const general = searchGeneral(query, sections, 6);
-  for (const s of general) {
-    parts.push(`[관련 참고 자료]\n파일: ${s.file}\n제목: ${s.title}\n\n${s.text}`);
-  }
-
-  return {
-    context: parts.join("\n\n---\n\n").slice(0, 30000),
-    hasMajor: false,
-    hasSubject: false,
-  };
-}
+    .filter((s)
