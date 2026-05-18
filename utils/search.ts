@@ -10,253 +10,157 @@ type Section = {
 };
 
 function normalize(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[?!.]/g, " ")
-    .trim();
+  return text.toLowerCase().replace(/\s+/g, " ").replace(/[?!.]/g, " ").trim();
 }
 
-function readMarkdownFiles() {
+function readSections(): Section[] {
   if (!fs.existsSync(DATA_DIR)) return [];
 
-  return fs
-    .readdirSync(DATA_DIR)
-    .filter((file) => file.endsWith(".md"))
-    .map((file) => {
-      const filePath = path.join(DATA_DIR, file);
-      const content = fs.readFileSync(filePath, "utf-8");
-      return { file, content };
-    });
-}
-
-function splitIntoSections(file: string, content: string): Section[] {
-  const rawSections = content
-    .split(/\n(?=#{1,4}\s)/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 30);
-
-  return rawSections.map((section) => {
-    const firstLine = section.split("\n")[0] || "";
-    const title = firstLine.replace(/^#{1,4}\s*/, "").trim();
-
-    return {
-      file,
-      title,
-      text: section,
-    };
-  });
-}
-
-function getAllSections() {
-  const docs = readMarkdownFiles();
+  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".md"));
   const sections: Section[] = [];
 
-  for (const doc of docs) {
-    sections.push(...splitIntoSections(doc.file, doc.content));
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
+
+    const parts = content
+      .split(/\n(?=#{1,4}\s)/g)
+      .map((x) => x.trim())
+      .filter((x) => x.length > 30);
+
+    for (const part of parts) {
+      const first = part.split("\n")[0] || "";
+      const title = first.replace(/^#{1,4}\s*/, "").trim();
+
+      sections.push({ file, title, text: part });
+    }
   }
 
   return sections;
 }
 
-function getSubjectSections() {
-  return getAllSections().filter((section) => {
-    const file = section.file;
-    return (
-      file.includes("교과") ||
-      file.includes("선택과목") ||
-      file.includes("subject") ||
-      file.includes("subjects")
-    );
-  });
+function isSubjectFile(file: string) {
+  return file.includes("교과") || file.includes("선택과목") || file.includes("subject");
 }
 
-function getMajorSections() {
-  return getAllSections().filter((section) => {
-    const file = section.file;
-    return file.includes("학과안내") || file.includes("major");
-  });
+function isMajorFile(file: string) {
+  return file.includes("학과안내") || file.includes("계열");
 }
 
-function extractPossibleKeywords(query: string) {
-  return query
-    .replace(/[?!.]/g, " ")
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter((w) => w.length >= 2);
-}
-
-function scoreSection(section: Section, query: string) {
+function findMajorSection(query: string, sections: Section[]) {
   const q = normalize(query);
-  const words = extractPossibleKeywords(query).map(normalize);
 
-  const title = normalize(section.title);
-  const text = normalize(section.text);
-  const file = normalize(section.file);
+  const majorSections = sections.filter((s) => isMajorFile(s.file));
 
-  let score = 0;
+  const exact = majorSections.find((s) => {
+    const title = normalize(s.title);
+    return title.length >= 3 && q.includes(title);
+  });
 
-  if (title === q) score += 1000;
-  if (title.includes(q)) score += 700;
-  if (text.includes(q)) score += 300;
-  if (file.includes(q)) score += 100;
+  if (exact) return exact;
 
-  for (const word of words) {
-    if (title.includes(word)) score += 120;
-    if (file.includes(word)) score += 50;
-    if (text.includes(word)) score += 20;
-  }
+  return majorSections
+    .map((s) => {
+      const title = normalize(s.title);
+      let score = 0;
 
-  return score;
+      if (title.includes("학과") && q.includes(title.replace("학과", ""))) score += 500;
+      if (normalize(s.text).includes(q)) score += 200;
+
+      return { ...s, score };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)[0] || null;
 }
 
-export function searchSections(query: string, limit = 8) {
-  const sections = getAllSections();
+function findSubjectSection(query: string, sections: Section[]) {
+  const q = normalize(query);
+  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
+
+  return subjectSections.find((s) => {
+    const title = normalize(s.title);
+    return title.length >= 2 && q.includes(title);
+  }) || null;
+}
+
+function extractSubjectSectionsFromText(text: string, sections: Section[]) {
+  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
+
+  return subjectSections.filter((s) => {
+    if (s.title.length < 2) return false;
+    return text.includes(s.title);
+  });
+}
+
+function searchGeneral(query: string, sections: Section[], limit = 6) {
+  const words = normalize(query).split(" ").filter((w) => w.length >= 2);
 
   return sections
-    .map((section) => ({
-      ...section,
-      score: scoreSection(section, query),
-    }))
+    .map((s) => {
+      const text = normalize(s.text);
+      const title = normalize(s.title);
+      let score = 0;
+
+      for (const w of words) {
+        if (title.includes(w)) score += 80;
+        if (text.includes(w)) score += 15;
+      }
+
+      return { ...s, score };
+    })
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
 
-export function findExactMajorSection(query: string) {
-  const sections = getMajorSections();
-  const normalizedQuery = normalize(query);
-
-  const candidates = sections
-    .map((section) => {
-      const title = normalize(section.title);
-      const text = normalize(section.text);
-
-      let score = 0;
-
-      if (normalizedQuery.includes(title) && title.length >= 3) score += 1000;
-      if (title && normalizedQuery.includes(title.replace("학과", ""))) score += 700;
-      if (title.includes(normalizedQuery)) score += 500;
-      if (text.includes(normalizedQuery)) score += 250;
-
-      for (const word of extractPossibleKeywords(query)) {
-        const w = normalize(word);
-        if (title.includes(w)) score += 200;
-        if (text.includes(w)) score += 30;
-      }
-
-      return { ...section, score };
-    })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  return candidates[0] || null;
-}
-
-export function findExactSubjectSection(query: string) {
-  const sections = getSubjectSections();
-  const normalizedQuery = normalize(query);
-
-  const candidates = sections
-    .map((section) => {
-      const title = normalize(section.title);
-      const text = normalize(section.text);
-
-      let score = 0;
-
-      if (normalizedQuery.includes(title) && title.length >= 2) score += 1000;
-      if (title.includes(normalizedQuery)) score += 700;
-      if (text.includes(normalizedQuery)) score += 250;
-
-      for (const word of extractPossibleKeywords(query)) {
-        const w = normalize(word);
-        if (title.includes(w)) score += 200;
-        if (text.includes(w)) score += 30;
-      }
-
-      return { ...section, score };
-    })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  return candidates[0] || null;
-}
-
-export function extractSubjectsFromText(text: string) {
-  const subjectSections = getSubjectSections();
-  const subjectNames = subjectSections
-    .map((s) => s.title)
-    .filter((title) => title.length >= 2 && title.length <= 30);
-
-  const found = subjectNames.filter((subject) => text.includes(subject));
-
-  return Array.from(new Set(found)).slice(0, 12);
-}
-
-export function findSubjectSectionsByNames(subjectNames: string[]) {
-  const subjectSections = getSubjectSections();
-
-  return subjectNames
-    .map((subject) => {
-      const found = subjectSections.find((section) => section.title === subject);
-      return found || null;
-    })
-    .filter(Boolean) as Section[];
-}
-
 export function buildContext(query: string) {
-  const exactMajor = findExactMajorSection(query);
-  const exactSubject = findExactSubjectSection(query);
+  const sections = readSections();
 
-  const contextParts: string[] = [];
+  const major = findMajorSection(query, sections);
+  const subject = findSubjectSection(query, sections);
 
-  if (exactMajor) {
-    contextParts.push(
-      `[학과 상세 안내]\n파일: ${exactMajor.file}\n제목: ${exactMajor.title}\n\n${exactMajor.text}`
-    );
+  const parts: string[] = [];
 
-    const subjects = extractSubjectsFromText(exactMajor.text);
-    const subjectDetails = findSubjectSectionsByNames(subjects);
+  // 1순위: 학과 섹션
+  if (major) {
+    parts.push(`[학과 상세 안내]\n파일: ${major.file}\n제목: ${major.title}\n\n${major.text}`);
 
-    for (const subject of subjectDetails.slice(0, 8)) {
-      contextParts.push(
-        `[관련 과목 정보]\n파일: ${subject.file}\n제목: ${subject.title}\n\n${subject.text}`
-      );
+    // 학과 섹션에 실제로 등장한 과목만 추가
+    const relatedSubjects = extractSubjectSectionsFromText(major.text, sections);
+
+    for (const s of relatedSubjects.slice(0, 10)) {
+      parts.push(`[관련 과목 정보]\n파일: ${s.file}\n제목: ${s.title}\n\n${s.text}`);
     }
+
+    console.log("학과 섹션:", major.title);
+    console.log("추출 과목:", relatedSubjects.map((s) => s.title));
+
+    return {
+      context: parts.join("\n\n---\n\n").slice(0, 35000),
+      hasMajor: true,
+      hasSubject: Boolean(subject),
+    };
   }
 
-  if (exactSubject) {
-    contextParts.push(
-      `[과목 상세 정보]\n파일: ${exactSubject.file}\n제목: ${exactSubject.title}\n\n${exactSubject.text}`
-    );
+  // 2순위: 과목 섹션
+  if (subject) {
+    parts.push(`[과목 상세 정보]\n파일: ${subject.file}\n제목: ${subject.title}\n\n${subject.text}`);
+
+    return {
+      context: parts.join("\n\n---\n\n").slice(0, 25000),
+      hasMajor: false,
+      hasSubject: true,
+    };
   }
 
-  const related = searchSections(query, 6);
-
-  for (const section of related) {
-    const alreadyIncluded = contextParts.some((part) =>
-      part.includes(`제목: ${section.title}`)
-    );
-
-    if (!alreadyIncluded) {
-      contextParts.push(
-        `[관련 참고 자료]\n파일: ${section.file}\n제목: ${section.title}\n\n${section.text}`
-      );
-    }
+  // 3순위: 일반 검색
+  const general = searchGeneral(query, sections, 6);
+  for (const s of general) {
+    parts.push(`[관련 참고 자료]\n파일: ${s.file}\n제목: ${s.title}\n\n${s.text}`);
   }
-
-  const finalContext = contextParts
-    .join("\n\n---\n\n")
-    .slice(0, 45000);
-
-  console.log("질문:", query);
-  console.log("학과 섹션:", exactMajor?.title || "없음");
-  console.log("과목 섹션:", exactSubject?.title || "없음");
-  console.log("context length:", finalContext.length);
 
   return {
-    context: finalContext,
-    hasMajor: Boolean(exactMajor),
-    hasSubject: Boolean(exactSubject),
+    context: parts.join("\n\n---\n\n").slice(0, 30000),
+    hasMajor: false,
+    hasSubject: false,
   };
 }
