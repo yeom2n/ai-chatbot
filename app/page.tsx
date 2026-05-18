@@ -186,10 +186,6 @@ export default function Home() {
                         ? "max-w-[88%] px-4 py-3 text-[15px] leading-7"
                         : "max-w-[78%] px-5 py-4 text-[15px] leading-8"
                     } ${
-                      m.role === "assistant"
-                        ? "max-h-[65vh] overflow-y-auto"
-                        : ""
-                    } ${
                       m.role === "user"
                         ? "rounded-br-md bg-blue-600 text-white"
                         : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
@@ -287,6 +283,25 @@ export default function Home() {
         }
 
         .markdown-body strong {
+          font-weight: 900;
+        }
+
+        .markdown-body table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 12px 0;
+          font-size: 14px;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+          border: 1px solid #cbd5e1;
+          padding: 9px 10px;
+          text-align: left;
+        }
+
+        .markdown-body th {
+          background: #eff6ff;
           font-weight: 900;
         }
       `}</style>
