@@ -45,6 +45,7 @@ function normalize(text: string) {
     .replace(/\s+/g, "")
     .replace(/[?!.]/g, "")
     .replace(/[·ㆍ]/g, "")
+    .replace(/[()]/g, "")
     .toLowerCase();
 }
 
@@ -52,7 +53,10 @@ function cleanToken(word: string) {
   return word
     .trim()
     .replace(/[?!.]/g, "")
-    .replace(/(은|는|이|가|을|를|에|에서|으로|로|와|과|랑|하고|도|만|의|에게|한테|부터|까지|처럼|보다|마다)$/g, "");
+    .replace(
+      /(은|는|이|가|을|를|에|에서|으로|로|와|랑|하고|도|만|의|에게|한테|부터|까지|처럼|보다|마다|야|이야|인가|추천|설명|알려줘|뭐야|무엇|뭘|배우는|배워)$/g,
+      ""
+    );
 }
 
 function getTokens(query: string) {
@@ -63,88 +67,12 @@ function getTokens(query: string) {
     .filter((word) => word.length >= 2);
 }
 
-function makeAliases(name: string, type: "major" | "subject") {
-  const aliases = new Set<string>();
-
-  aliases.add(name);
-
-  if (type === "major") {
-    aliases.add(name.replace(/학과/g, ""));
-    aliases.add(name.replace(/학부/g, ""));
-    aliases.add(name.replace(/전공/g, ""));
-    aliases.add(name.replace(/계열/g, ""));
-    aliases.add(name.replace(/교육과/g, "교육"));
-  }
-
-  return Array.from(aliases)
-    .map(normalize)
-    .filter((alias) => alias.length >= 2);
-}
-
-function findBestName(
-  query: string,
-  names: string[],
-  type: "major" | "subject"
-) {
-  const q = normalize(query);
-  const tokens = getTokens(query).map(normalize);
-
-  const scored = names
-    .map((name) => {
-      const aliases = makeAliases(name, type);
-      let score = 0;
-
-      for (const alias of aliases) {
-        if (q === alias) score += 2000;
-        if (q.includes(alias)) score += 1200 + alias.length;
-        if (alias.includes(q) && q.length >= 2) score += 500;
-
-        for (const token of tokens) {
-          if (token === alias) score += 1500;
-          if (token.includes(alias)) score += 900 + alias.length;
-          if (alias.includes(token) && token.length >= 2) score += 250;
-        }
-      }
-
-      return { name, score };
-    })
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  return scored[0]?.name || "";
-}
-
-function findSubject(query: string, db: DB) {
-  const subjectNames = Object.keys(db.subjects);
-  return findBestName(query, subjectNames, "subject");
-}
-
-function findMajor(query: string, db: DB) {
-  const majorNames = Object.keys(db.majors);
-  return findBestName(query, majorNames, "major");
-}
-
-function isSubjectQuestion(query: string) {
-  return (
-    query.includes("과목") ||
-    query.includes("단위") ||
-    query.includes("이수") ||
-    query.includes("성취도") ||
-    query.includes("등급") ||
-    query.includes("무슨 내용") ||
-    query.includes("뭘 배워")
-  );
-}
-
-function isMajorQuestion(query: string) {
-  return (
-    query.includes("학과") ||
-    query.includes("학부") ||
-    query.includes("전공") ||
-    query.includes("계열") ||
-    query.includes("진로") ||
-    query.includes("직업")
-  );
+function removeMajorSuffix(name: string) {
+  return name
+    .replace(/학과$/g, "")
+    .replace(/학부$/g, "")
+    .replace(/전공$/g, "")
+    .replace(/계열$/g, "");
 }
 
 function visible(value?: string) {
@@ -157,6 +85,61 @@ function visible(value?: string) {
   if (text.includes("미기재")) return false;
 
   return true;
+}
+
+function findMajor(query: string, db: DB) {
+  const tokens = getTokens(query).map(normalize);
+  const names = Object.keys(db.majors);
+
+  // 0순위: 경영학과 강제 정확 처리
+  if (tokens.includes("경영학과") || tokens.includes("경영")) {
+    const exactBusiness = names.find((name) => normalize(name) === "경영학과");
+    if (exactBusiness) return exactBusiness;
+  }
+
+  // 1순위: 토큰이 학과명 전체와 정확히 일치
+  for (const token of tokens) {
+    const found = names.find((name) => normalize(name) === token);
+    if (found) return found;
+  }
+
+  // 2순위: 토큰이 학과명에서 학과/학부/전공/계열 제거한 이름과 정확히 일치
+  for (const token of tokens) {
+    const found = names.find((name) => normalize(removeMajorSuffix(name)) === token);
+    if (found) return found;
+  }
+
+  // 3순위: 질문에 학과명 전체가 공백 포함 원문 기준으로 등장
+  const compactQuery = normalize(query);
+  const fullMatch = names
+    .filter((name) => compactQuery.includes(normalize(name)))
+    .sort((a, b) => normalize(a).length - normalize(b).length)[0];
+
+  if (fullMatch) return fullMatch;
+
+  return "";
+}
+
+function findSubject(query: string, db: DB) {
+  const tokens = getTokens(query).map(normalize);
+  const compactQuery = normalize(query);
+  const names = Object.keys(db.subjects);
+
+  const sorted = [...names].sort(
+    (a, b) => normalize(b).length - normalize(a).length
+  );
+
+  // 1순위: 토큰이 과목명 전체와 정확히 일치
+  for (const token of tokens) {
+    const found = sorted.find((name) => normalize(name) === token);
+    if (found) return found;
+  }
+
+  // 2순위: 질문에 과목명 전체가 등장
+  const fullMatch = sorted.find((name) => compactQuery.includes(normalize(name)));
+  if (fullMatch) return fullMatch;
+
+  return "";
 }
 
 function formatSubject(subject: Subject) {
@@ -239,7 +222,6 @@ function formatMajor(major: Major, db: DB) {
 }
 
 function searchMajorsByKeyword(query: string, db: DB) {
-  const q = normalize(query);
   const tokens = getTokens(query).map(normalize);
 
   const results = Object.values(db.majors)
@@ -257,8 +239,6 @@ function searchMajorsByKeyword(query: string, db: DB) {
 
       let score = 0;
 
-      if (targetText.includes(q)) score += 500;
-
       for (const token of tokens) {
         if (targetText.includes(token)) score += 100;
       }
@@ -273,13 +253,15 @@ function searchMajorsByKeyword(query: string, db: DB) {
   return results;
 }
 
-function formatMajorSearchList(query: string, majors: Major[], db: DB) {
+function formatMajorSearchList(query: string, majors: Major[]) {
   const lines = majors.map((major) => {
     const subjectNames = (major.recommendedSubjects || []).slice(0, 5);
     const subjectText =
       subjectNames.length > 0 ? subjectNames.join(", ") : "추천 과목 정보 없음";
 
-    return `- **${major.name}**: ${visible(major.description) ? major.description : "자료에 학과 정보가 있습니다."}\n  - 추천 과목: ${subjectText}`;
+    return `- **${major.name}**: ${
+      visible(major.description) ? major.description : "자료에 학과 정보가 있습니다."
+    }\n  - 추천 과목: ${subjectText}`;
   });
 
   return `자료에서 "${query}"와 관련된 학과 정보를 찾았습니다.\n\n**관련 학과 / 계열**\n${lines.join(
@@ -303,33 +285,35 @@ export async function POST(req: Request) {
       messages?.filter((message: Message) => message.role === "user").at(-1)
         ?.content || "";
 
-    const subjectName = findSubject(userMessage, db);
     const majorName = findMajor(userMessage, db);
+    const subjectName = findSubject(userMessage, db);
 
-    if (subjectName && (isSubjectQuestion(userMessage) || !majorName)) {
-      return NextResponse.json({
-        reply: formatSubject(db.subjects[subjectName]),
-      });
-    }
-
+    // 학과명이 잡히면 학과 답변 우선
     if (majorName) {
       return NextResponse.json({
         reply: formatMajor(db.majors[majorName], db),
       });
     }
 
+    // 학과가 안 잡히고 과목명이 잡히면 과목 답변
     if (subjectName) {
       return NextResponse.json({
         reply: formatSubject(db.subjects[subjectName]),
       });
     }
 
-    if (isMajorQuestion(userMessage)) {
+    // 정확한 학과/과목이 없을 때만 관련 학과 검색
+    if (
+      userMessage.includes("계열") ||
+      userMessage.includes("진로") ||
+      userMessage.includes("학과") ||
+      userMessage.includes("전공")
+    ) {
       const relatedMajors = searchMajorsByKeyword(userMessage, db);
 
       if (relatedMajors.length > 0) {
         return NextResponse.json({
-          reply: formatMajorSearchList(userMessage, relatedMajors, db),
+          reply: formatMajorSearchList(userMessage, relatedMajors),
         });
       }
     }
