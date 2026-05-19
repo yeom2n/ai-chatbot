@@ -40,6 +40,69 @@ function loadDB(): DB | null {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
+function patchDB(db: DB): DB {
+  db.majors["경영학과"] = {
+    name: "경영학과",
+    description:
+      "기업과 조직의 운영, 관리, 전략 등을 연구하고 다양한 경영 이론과 실무를 균형 있게 학습하며, 효율적이고 효과적인 조직 운영을 위한 지식과 기술을 습득하는 학과입니다.",
+    jobs: [
+      "경영 컨설턴트",
+      "재무 분석가",
+      "인사 관리자",
+      "금융 분석가",
+      "투자 은행가",
+      "재무 관리자",
+      "리스크 매니저",
+      "마케팅 전문가",
+      "브랜드 매니저",
+      "광고 기획자",
+      "회계사",
+      "세무사",
+      "정책 분석가",
+      "행정 관리자",
+      "경영학 교수",
+      "연구원",
+    ],
+    recommendedSubjects: [
+      "화법과 언어",
+      "독서와 작문",
+      "문학",
+      "대수",
+      "미적분Ⅰ",
+      "확률과 통계",
+      "미적분Ⅱ",
+      "기하",
+      "경제 수학",
+      "실용 통계",
+      "수학과제 탐구",
+      "영어Ⅰ",
+      "영어Ⅱ",
+      "영어 독해와 작문",
+      "영어 발표와 토론",
+      "실생활 영어 회화",
+      "세계 문화와 영어",
+      "세계시민과 지리",
+      "세계사",
+      "사회와 문화",
+      "법과 사회",
+      "경제",
+      "윤리와 사상",
+      "국제 관계의 이해",
+      "사회문제 탐구",
+      "금융과 경제생활",
+      "정보",
+      "인공지능 기초",
+      "데이터 과학",
+      "제2외국어",
+      "제2외국어 문화",
+    ],
+    raw: "경영학과 보정 데이터",
+    sourceFile: "사회과학계열_학과안내.md",
+  };
+
+  return db;
+}
+
 function normalize(text: string) {
   return text
     .replace(/\s+/g, "")
@@ -90,25 +153,21 @@ function findMajor(query: string, db: DB) {
   const tokens = getTokens(query).map(normalize);
   const names = Object.keys(db.majors);
 
-  // 최우선: 경영학과는 스포츠경영학과보다 무조건 먼저
   if (q.includes("경영학과") || tokens.includes("경영학과") || tokens.includes("경영")) {
     const business = findExactBusinessMajor(db);
     if (business) return business;
   }
 
-  // 1순위: 토큰이 학과명 전체와 정확히 일치
   for (const token of tokens) {
     const found = names.find((name) => normalize(name) === token);
     if (found) return found;
   }
 
-  // 2순위: 토큰이 학과명에서 학과/학부/전공/계열 제거한 이름과 정확히 일치
   for (const token of tokens) {
     const found = names.find((name) => normalize(removeMajorSuffix(name)) === token);
     if (found) return found;
   }
 
-  // 3순위: 질문에 학과명 전체가 등장
   const fullMatch = names
     .filter((name) => q.includes(normalize(name)))
     .sort((a, b) => normalize(a).length - normalize(b).length)[0];
@@ -280,14 +339,17 @@ function formatMajorSearchList(query: string, majors: Major[]) {
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-    const db = loadDB();
 
-    if (!db) {
+    const loadedDB = loadDB();
+
+    if (!loadedDB) {
       return NextResponse.json({
         reply:
           "data/db.json 파일이 없습니다. 먼저 `node scripts/build-db.mjs`를 실행해 주세요.",
       });
     }
+
+    const db = patchDB(loadedDB);
 
     const userMessage =
       messages?.filter((message: Message) => message.role === "user").at(-1)
