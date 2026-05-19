@@ -14,7 +14,6 @@ const suggestions = [
   "간호학과 선택과목 추천",
   "경영학과는 뭘 배우는 학과야?",
   "미적분Ⅱ는 어떤 과목이야?",
-  "디자인 계열 추천 과목",
 ];
 
 export default function Home() {
@@ -34,6 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     const el = scrollAreaRef.current;
+
     if (!el) return;
 
     el.scrollTo({
@@ -196,7 +196,9 @@ export default function Home() {
           >
             {!mobileView && (
               <div className="shrink-0 border-b border-slate-200 px-6 py-4">
-                <div className="text-base font-black">상담 채팅</div>
+                <div className="text-base font-black">
+                  상담 채팅
+                </div>
 
                 <div className="text-xs text-slate-500">
                   자료 기반으로 선택과목 정보를 안내합니다.
@@ -242,7 +244,34 @@ export default function Home() {
 
                     <div className="markdown-body">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {m.content}
+                        {m.content
+                          .split("\n")
+                          .filter((line) => {
+                            const t = line.trim();
+
+                            if (!t) return true;
+
+                            if (
+                              t.includes("이런 학생에게 적합")
+                            )
+                              return false;
+
+                            if (t.includes("추천 학생"))
+                              return false;
+
+                            if (
+                              t.includes("자료에 명시되지 않음")
+                            )
+                              return false;
+
+                            if (t === "없음") return false;
+
+                            if (t.includes("미기재"))
+                              return false;
+
+                            return true;
+                          })
+                          .join("\n")}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -276,7 +305,9 @@ export default function Home() {
                 <input
                   value={input}
                   disabled={loading}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) =>
+                    setInput(e.target.value)
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       sendMessage();
