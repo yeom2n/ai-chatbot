@@ -16,14 +16,15 @@ type Subject = {
   keyIdeas?: string;
   relatedMajors?: string;
   relatedJobs?: string;
+  recommendedFor?: string;
 };
 
 type Major = {
   name: string;
   description?: string;
+  recommendedFor?: string;
   jobs?: string[];
   recommendedSubjects?: string[];
-  raw?: string;
 };
 
 type DB = {
@@ -37,8 +38,8 @@ function loadDB(): DB | null {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
-function normalize(text: string) {
-  return text
+function normalize(s: string) {
+  return s
     .replace(/\s+/g, "")
     .replace(/[?!.]/g, "")
     .replace(/[·ㆍ]/g, "")
@@ -46,120 +47,144 @@ function normalize(text: string) {
 }
 
 function cleanQuery(query: string) {
-  return query.replace(
-    /(은|는|이|가|을|를|에|에서|으로|로|와|과|의|도|만|야|인가|이야|니|냐|줘|알려줘)/g,
-    " "
-  );
+  return query
+    .replace(/[?!.]/g, " ")
+    .replace(/은|는|이|가|을|를|에|에서|으로|로|와|과|랑|하고|도|만|의|에게|한테|부터|까지|처럼|보다|마다/g, " ");
 }
 
-function findExactMajor(query: string, db: DB) {
-  const q = normalize(cleanQuery(query));
-  const names = Object.keys(db.majors);
+function makeAliases(name: string, type: "major" | "subject") {
+  const aliases = new Set<string>();
+  aliases.add(name);
 
-  const exact = names.find((name) => q.includes(normalize(name)));
-  if (exact) return exact;
+  if (type === "major") {
+    aliases.add(name.replace(/학과$/g, ""));
+    aliases.add(name.replace(/학부$/g, ""));
+    aliases.add(name.replace(/전공$/g, ""));
+    aliases.add(name.replace(/계열$/g, ""));
+  }
 
-  const withoutSuffix = names.find((name) => {
-    const base = normalize(
-      name
-        .replace(/학과$/g, "")
-        .replace(/학부$/g, "")
-        .replace(/전공$/g, "")
-        .replace(/계열$/g, "")
-    );
-
-    return q === base || q.includes(base + "학과") || q.includes(base + "계열");
-  });
-
-  return withoutSuffix || "";
+  return Array.from(aliases)
+    .map(normalize)
+    .filter((x) => x.length >= 2);
 }
 
-function findExactSubject(query: string, db: DB) {
+function findBestName(query: string, names: string[], type: "major" | "subject") {
   const q = normalize(cleanQuery(query));
-  const names = Object.keys(db.subjects);
 
-  const exact = names.find((name) => q.includes(normalize(name)));
-  return exact || "";
+  const scored = names
+    .map((name) => {
+      const aliases = makeAliases(name, type);
+      const nameNorm = normalize(name);
+
+      let score = 0;
+
+      for (const alias of aliases) {
+        if (q === alias) score += 3000;
+        if (q.includes(nameNorm)) score += 2500;
+
+        if (type === "major") {
+          if (q.includes(alias + "학과")) score += 2200;
+          if (q.includes(alias + "학부")) score += 2200;
+          if (q.includes(alias + "전공")) score += 2200;
+          if (q.includes(alias + "계열")) score += 2200;
+        }
+
+        if (q.includes(alias)) score += 1000 + alias.length;
+      }
+
+      // 짧은 단어 때문에 스포츠경영학과가 경영학과보다 먼저 잡히는 것 방지
+      if (type === "major") {
+        const directMajorPattern = new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+        if (directMajorPattern.test(query)) score += 5000;
+      }
+
+      return { name, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.name.length - b.name.length;
+    });
+
+  return scored[0]?.name || "";
+}
+
+function findMajor(query: string, db: DB) {
+  return findBestName(query, Object.keys(db.majors), "major");
+}
+
+function findSubject(query: string, db: DB) {
+  return findBestName(query, Object.keys(db.subjects), "subject");
 }
 
 function visible(value?: string) {
   if (!value) return false;
-  const t = value.trim();
-  if (!t) return false;
-  if (t.includes("자료에 명시되지 않음")) return false;
-  if (t === "없음") return false;
-  if (t.includes("미기재")) return false;
+  const text = value.trim();
+  if (!text) return false;
+  if (text.includes("자료에 명시되지 않음")) return false;
+  if (text === "없음") return false;
+  if (text.includes("미기재")) return false;
   return true;
 }
 
-function formatSubject(subject: Subject) {
-  const parts: string[] = [];
+function formatSubject(s: Subject) {
+  const sections: string[] = [];
 
-  parts.push(`${subject.name}은(는) 운양고 선택과목 자료에 등록된 과목입니다.`);
+  sections.push(`${s.name}은(는) 운양고 선택과목 자료에 등록된 과목입니다.`);
 
-  if (visible(subject.selectionType)) {
-    parts.push(`**선택 구분**\n- ${subject.selectionType}`);
-  }
+  if (visible(s.selectionType)) sections.push(`**선택 구분**\n- ${s.selectionType}`);
+  if (visible(s.credits)) sections.push(`**단위수**\n- ${s.credits}`);
+  if (visible(s.achievement)) sections.push(`**성취도 / 등급**\n- ${s.achievement}`);
 
-  if (visible(subject.credits)) {
-    parts.push(`**단위수**\n- ${subject.credits}`);
-  }
-
-  if (visible(subject.achievement)) {
-    parts.push(`**성취도 / 등급**\n- ${subject.achievement}`);
-  }
-
-  if (visible(subject.description) || visible(subject.keyIdeas)) {
-    const lines = [
-      visible(subject.description) ? `- ${subject.description}` : "",
-      visible(subject.keyIdeas) ? `- ${subject.keyIdeas}` : "",
-    ].filter(Boolean);
-
-    parts.push(`**과목 내용**\n${lines.join("\n")}`);
-  }
-
-  if (visible(subject.relatedMajors)) {
-    parts.push(`**관련 학과**\n- ${subject.relatedMajors}`);
-  }
-
-  if (visible(subject.relatedJobs)) {
-    parts.push(`**관련 직업**\n- ${subject.relatedJobs}`);
-  }
-
-  return parts.join("\n\n");
-}
-
-function formatMajor(major: Major, db: DB) {
-  const parts: string[] = [];
-
-  parts.push(`${major.name}는 자료에 따르면 다음과 같은 내용을 중심으로 배우는 학과입니다.`);
-
-  if (visible(major.description)) {
-    parts.push(`**학과 설명**\n- ${major.description}`);
-  }
-
-  if (major.jobs && major.jobs.length > 0) {
-    parts.push(`**관련 직업**\n${major.jobs.map((j) => `- ${j}`).join("\n")}`);
-  }
-
-  const subjects = (major.recommendedSubjects || [])
-    .map((name) => db.subjects[name])
-    .filter(Boolean);
-
-  if (subjects.length > 0) {
-    parts.push(
-      `**추천 선택과목**\n${subjects
-        .map((s) => {
-          const detail = [s.selectionType, s.credits].filter(visible).join(", ");
-          return `- **${s.name}**${detail ? ` (${detail})` : ""}${
-            visible(s.description) ? `: ${s.description}` : ""
-          }`;
-        })
+  if (visible(s.description) || visible(s.keyIdeas)) {
+    sections.push(
+      `**과목 내용**\n${[
+        visible(s.description) ? `- ${s.description}` : "",
+        visible(s.keyIdeas) ? `- ${s.keyIdeas}` : "",
+      ]
+        .filter(Boolean)
         .join("\n")}`
     );
   }
 
-  return parts.join("\n\n");
+  if (visible(s.relatedMajors)) sections.push(`**관련 학과**\n- ${s.relatedMajors}`);
+  if (visible(s.relatedJobs)) sections.push(`**관련 직업**\n- ${s.relatedJobs}`);
+
+  return sections.join("\n\n").trim();
+}
+
+function formatMajor(major: Major, db: DB) {
+  const subjects = (major.recommendedSubjects || [])
+    .map((name) => db.subjects[name])
+    .filter(Boolean);
+
+  const sections: string[] = [];
+
+  sections.push(`${major.name}는 자료에 따르면 다음과 같은 내용을 중심으로 배우는 학과입니다.`);
+
+  if (visible(major.description)) {
+    sections.push(`**학과 설명**\n- ${major.description}`);
+  }
+
+  if (major.jobs && major.jobs.length > 0) {
+    sections.push(`**관련 직업**\n${major.jobs.map((j) => `- ${j}`).join("\n")}`);
+  }
+
+  if (subjects.length > 0) {
+    const subjectLines = subjects
+      .map((s) => {
+        const detail = [s.selectionType, s.credits].filter(visible).join(", ");
+        const desc = visible(s.description) ? s.description : "자료에 과목 정보가 있습니다.";
+        return `- **${s.name}**${detail ? ` (${detail})` : ""}: ${desc}`;
+      })
+      .join("\n");
+
+    sections.push(`**추천 선택과목**\n${subjectLines}`);
+  } else {
+    sections.push("**추천 선택과목**\n- 학교 제공 자료에서 이 학과와 직접 연결된 추천 과목을 찾지 못했습니다.");
+  }
+
+  return sections.join("\n\n").trim();
 }
 
 export async function POST(req: Request) {
@@ -176,8 +201,8 @@ export async function POST(req: Request) {
     const userMessage =
       messages?.filter((m: Message) => m.role === "user").at(-1)?.content || "";
 
-    const majorName = findExactMajor(userMessage, db);
-    const subjectName = findExactSubject(userMessage, db);
+    const majorName = findMajor(userMessage, db);
+    const subjectName = findSubject(userMessage, db);
 
     if (majorName) {
       return NextResponse.json({
@@ -192,8 +217,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      reply:
-        "학교 제공 자료에서 해당 학과나 과목 정보를 찾지 못했습니다. 학과명이나 과목명을 정확히 입력해 주세요.",
+      reply: "학교 제공 자료에서 해당 학과나 과목 정보를 찾지 못했습니다. 학과명이나 과목명을 정확히 입력해 주세요.",
     });
   } catch {
     return NextResponse.json({
