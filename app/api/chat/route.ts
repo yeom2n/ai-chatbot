@@ -77,13 +77,11 @@ function removeMajorSuffix(name: string) {
 
 function visible(value?: string) {
   if (!value) return false;
-
   const text = value.trim();
   if (!text) return false;
   if (text.includes("자료에 명시되지 않음")) return false;
   if (text === "없음") return false;
   if (text.includes("미기재")) return false;
-
   return true;
 }
 
@@ -91,10 +89,25 @@ function findMajor(query: string, db: DB) {
   const tokens = getTokens(query).map(normalize);
   const names = Object.keys(db.majors);
 
-  // 0순위: 경영학과 강제 정확 처리
-  if (tokens.includes("경영학과") || tokens.includes("경영")) {
-    const exactBusiness = names.find((name) => normalize(name) === "경영학과");
-    if (exactBusiness) return exactBusiness;
+  // 경영 키워드 포함 여부 먼저 판단
+  const hasBusiness = tokens.some(
+    (t) => t === "경영" || t === "경영학과" || t === "경영학"
+  );
+
+  if (hasBusiness) {
+    // 정확히 "경영학과"인 키 우선
+    const exactMatch = names.find((name) => normalize(name) === "경영학과");
+    if (exactMatch) return exactMatch;
+
+    // 없으면 "경영" 포함된 학과 중 이름이 가장 짧은 것
+    const fallback = names
+      .filter((name) => normalize(name).includes("경영"))
+      .sort((a, b) => normalize(a).length - normalize(b).length)[0];
+
+    if (fallback) return fallback;
+
+    // db에 경영 관련 학과가 아예 없으면 빈 값 반환 (엉뚱한 학과 방지)
+    return "";
   }
 
   // 1순위: 토큰이 학과명 전체와 정확히 일치
@@ -105,7 +118,9 @@ function findMajor(query: string, db: DB) {
 
   // 2순위: 토큰이 학과명에서 학과/학부/전공/계열 제거한 이름과 정확히 일치
   for (const token of tokens) {
-    const found = names.find((name) => normalize(removeMajorSuffix(name)) === token);
+    const found = names.find(
+      (name) => normalize(removeMajorSuffix(name)) === token
+    );
     if (found) return found;
   }
 
@@ -113,7 +128,7 @@ function findMajor(query: string, db: DB) {
   const compactQuery = normalize(query);
   const fullMatch = names
     .filter((name) => compactQuery.includes(normalize(name)))
-    .sort((a, b) => normalize(a).length - normalize(b).length)[0];
+    .sort((a, b) => normalize(b).length - normalize(a).length)[0];
 
   if (fullMatch) return fullMatch;
 
