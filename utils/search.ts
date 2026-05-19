@@ -11,7 +11,6 @@ export type SearchBuildResult = {
 
 type Section = {
   file: string;
-  level: number;
   title: string;
   text: string;
 };
@@ -19,85 +18,55 @@ type Section = {
 function normalize(text: string) {
   return text
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[?!.]/g, " ")
+    .replace(/\s+/g, "")
+    .replace(/[?!.]/g, "")
     .trim();
 }
 
-function readFiles() {
+function readSections(): Section[] {
   if (!fs.existsSync(DATA_DIR)) return [];
 
-  return fs
-    .readdirSync(DATA_DIR)
-    .filter((file) => file.endsWith(".md"))
-    .map((file) => ({
-      file,
-      content: fs.readFileSync(path.join(DATA_DIR, file), "utf-8"),
-    }));
-}
-
-function splitHeadingSections(file: string, content: string): Section[] {
-  const lines = content.split(/\r?\n/);
+  const files = fs.readdirSync(DATA_DIR).filter((file) => file.endsWith(".md"));
   const sections: Section[] = [];
 
-  for (let i = 0; i < lines.length; i++) {
-    const match = lines[i].match(/^(#{1,4})\s+(.+)$/);
-    if (!match) continue;
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(DATA_DIR, file), "utf-8");
+    const lines = content.split(/\r?\n/);
 
-    const level = match[1].length;
-    const title = match[2].trim();
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/^(#{1,5})\s+(.+)$/);
+      if (!match) continue;
 
-    let end = lines.length;
-    for (let j = i + 1; j < lines.length; j++) {
-      const next = lines[j].match(/^(#{1,4})\s+(.+)$/);
-      if (next && next[1].length <= level) {
-        end = j;
-        break;
+      const level = match[1].length;
+      const title = match[2].trim();
+
+      let end = lines.length;
+
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = lines[j].match(/^(#{1,5})\s+(.+)$/);
+        if (next && next[1].length <= level) {
+          end = j;
+          break;
+        }
+      }
+
+      const text = lines.slice(i, end).join("\n").trim();
+
+      if (text.length > 20) {
+        sections.push({
+          file,
+          title,
+          text,
+        });
       }
     }
-
-    const text = lines.slice(i, end).join("\n").trim();
-
-    if (text.length > 30) {
-      sections.push({ file, level, title, text });
-    }
   }
 
   return sections;
 }
 
-function splitBoldSubjectSections(file: string, content: string): Section[] {
-  const parts = content
-    .split(/\n(?=\*\*[^*\n]+\*\*)/g)
-    .map((x) => x.trim())
-    .filter((x) => x.length > 30);
-
-  return parts
-    .map((text) => {
-      const first = text.split("\n")[0] || "";
-      const match = first.match(/^\*\*([^*\n]+)\*\*/);
-      if (!match) return null;
-
-      return {
-        file,
-        level: 5,
-        title: match[1].trim(),
-        text,
-      };
-    })
-    .filter(Boolean) as Section[];
-}
-
-function getAllSections() {
-  const files = readFiles();
-  const sections: Section[] = [];
-
-  for (const f of files) {
-    sections.push(...splitHeadingSections(f.file, f.content));
-    sections.push(...splitBoldSubjectSections(f.file, f.content));
-  }
-
-  return sections;
+function isMajorFile(file: string) {
+  return file.includes("학과안내");
 }
 
 function isSubjectFile(file: string) {
@@ -109,48 +78,136 @@ function isSubjectFile(file: string) {
   );
 }
 
-function isMajorFile(file: string) {
-  return file.includes("학과안내") || file.includes("계열_학과");
-}
-
-function extractTargetNames(query: string) {
-  const cleaned = query.replace(/[?!.]/g, " ");
-  const raw = cleaned.split(/\s+/).filter(Boolean);
-
-  const targets = raw.filter((word) =>
-    /(학과|학부|전공|계열|교육과|공학과|의예과|약학과|간호학과)$/.test(word)
-  );
-
-  return Array.from(new Set(targets));
-}
-
-function findMajorSection(query: string, sections: Section[]) {
-  const targets = extractTargetNames(query);
-  const majorSections = sections.filter((s) => isMajorFile(s.file));
-
-  for (const target of targets) {
-    const nt = normalize(target);
-
-    const exact = majorSections.find((s) => normalize(s.title) === nt);
-    if (exact) return exact;
-
-    const includes = majorSections.find((s) => normalize(s.title).includes(nt));
-    if (includes) return includes;
-  }
-
-  return null;
-}
-
-function findSubjectSection(query: string, sections: Section[]) {
-  const subjectSections = sections.filter((s) => isSubjectFile(s.file));
+function findMajor(query: string, sections: Section[]) {
   const q = normalize(query);
 
-  const exact = subjectSections.find((s) => q.includes(normalize(s.title)));
+  const majorSections = sections.filter((section) => isMajorFile(section.file));
+
+  const exact = majorSections.find((section) => {
+    const title = normalize(section.title);
+    return q.includes(title) || q.includes(title.replace("학과", ""));
+  });
+
   if (exact) return exact;
 
   return null;
 }
 
-function getSubjectNames(sections: Section[]) {
+function findSubject(query: string, sections: Section[]) {
+  const q = normalize(query);
+
+  const subjectSections = sections.filter((section) =>
+    isSubjectFile(section.file)
+  );
+
+  const exact = subjectSections.find((section) => {
+    const title = normalize(section.title);
+    return q.includes(title);
+  });
+
+  if (exact) return exact;
+
+  return null;
+}
+
+function extractSubjectsFromText(text: string, sections: Section[]) {
+  const subjectSections = sections.filter((section) =>
+    isSubjectFile(section.file)
+  );
+
+  const found = subjectSections.filter((section) => {
+    const subjectName = section.title.trim();
+    if (subjectName.length < 2) return false;
+    return text.includes(subjectName);
+  });
+
+  const unique = new Map<string, Section>();
+
+  for (const section of found) {
+    unique.set(section.title, section);
+  }
+
+  return Array.from(unique.values()).slice(0, 12);
+}
+
+function generalSearch(query: string, sections: Section[]) {
+  const words = query
+    .replace(/[?!.]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 2);
+
   return sections
-    .filter((s)
+    .map((section) => {
+      let score = 0;
+
+      for (const word of words) {
+        if (section.title.includes(word)) score += 100;
+        if (section.text.includes(word)) score += 20;
+        if (section.file.includes(word)) score += 30;
+      }
+
+      return {
+        ...section,
+        score,
+      };
+    })
+    .filter((section) => section.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+export function buildContext(query: string): SearchBuildResult {
+  const sections = readSections();
+
+  const major = findMajor(query, sections);
+  const subject = findSubject(query, sections);
+
+  const parts: string[] = [];
+
+  if (major) {
+    parts.push(
+      `[학과 상세 안내]\n파일: ${major.file}\n제목: ${major.title}\n\n${major.text}`
+    );
+
+    const relatedSubjects = extractSubjectsFromText(major.text, sections);
+
+    for (const related of relatedSubjects) {
+      parts.push(
+        `[관련 과목 정보]\n파일: ${related.file}\n제목: ${related.title}\n\n${related.text}`
+      );
+    }
+
+    return {
+      mode: "major",
+      foundTitle: major.title,
+      context: parts.join("\n\n---\n\n").slice(0, 35000),
+    };
+  }
+
+  if (subject) {
+    parts.push(
+      `[과목 상세 정보]\n파일: ${subject.file}\n제목: ${subject.title}\n\n${subject.text}`
+    );
+
+    return {
+      mode: "subject",
+      foundTitle: subject.title,
+      context: parts.join("\n\n---\n\n").slice(0, 25000),
+    };
+  }
+
+  const general = generalSearch(query, sections);
+
+  for (const item of general) {
+    parts.push(
+      `[관련 참고 자료]\n파일: ${item.file}\n제목: ${item.title}\n\n${item.text}`
+    );
+  }
+
+  return {
+    mode: general.length > 0 ? "general" : "none",
+    foundTitle: general[0]?.title,
+    context: parts.join("\n\n---\n\n").slice(0, 30000),
+  };
+}
