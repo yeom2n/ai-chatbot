@@ -75,39 +75,25 @@ function removeMajorSuffix(name: string) {
     .replace(/계열$/g, "");
 }
 
-function visible(value?: string) {
-  if (!value) return false;
-  const text = value.trim();
-  if (!text) return false;
-  if (text.includes("자료에 명시되지 않음")) return false;
-  if (text === "없음") return false;
-  if (text.includes("미기재")) return false;
-  return true;
+function findExactBusinessMajor(db: DB) {
+  const names = Object.keys(db.majors);
+
+  return (
+    names.find((name) => normalize(name) === "경영학과") ||
+    names.find((name) => normalize(name).startsWith("경영학과")) ||
+    ""
+  );
 }
 
 function findMajor(query: string, db: DB) {
+  const q = normalize(query);
   const tokens = getTokens(query).map(normalize);
   const names = Object.keys(db.majors);
 
-  // 경영 키워드 포함 여부 먼저 판단
-  const hasBusiness = tokens.some(
-    (t) => t === "경영" || t === "경영학과" || t === "경영학"
-  );
-
-  if (hasBusiness) {
-    // 정확히 "경영학과"인 키 우선
-    const exactMatch = names.find((name) => normalize(name) === "경영학과");
-    if (exactMatch) return exactMatch;
-
-    // 없으면 "경영" 포함된 학과 중 이름이 가장 짧은 것
-    const fallback = names
-      .filter((name) => normalize(name).includes("경영"))
-      .sort((a, b) => normalize(a).length - normalize(b).length)[0];
-
-    if (fallback) return fallback;
-
-    // db에 경영 관련 학과가 아예 없으면 빈 값 반환 (엉뚱한 학과 방지)
-    return "";
+  // 최우선: 경영학과는 스포츠경영학과보다 무조건 먼저
+  if (q.includes("경영학과") || tokens.includes("경영학과") || tokens.includes("경영")) {
+    const business = findExactBusinessMajor(db);
+    if (business) return business;
   }
 
   // 1순위: 토큰이 학과명 전체와 정확히 일치
@@ -118,17 +104,14 @@ function findMajor(query: string, db: DB) {
 
   // 2순위: 토큰이 학과명에서 학과/학부/전공/계열 제거한 이름과 정확히 일치
   for (const token of tokens) {
-    const found = names.find(
-      (name) => normalize(removeMajorSuffix(name)) === token
-    );
+    const found = names.find((name) => normalize(removeMajorSuffix(name)) === token);
     if (found) return found;
   }
 
-  // 3순위: 질문에 학과명 전체가 공백 포함 원문 기준으로 등장
-  const compactQuery = normalize(query);
+  // 3순위: 질문에 학과명 전체가 등장
   const fullMatch = names
-    .filter((name) => compactQuery.includes(normalize(name)))
-    .sort((a, b) => normalize(b).length - normalize(a).length)[0];
+    .filter((name) => q.includes(normalize(name)))
+    .sort((a, b) => normalize(a).length - normalize(b).length)[0];
 
   if (fullMatch) return fullMatch;
 
@@ -144,17 +127,27 @@ function findSubject(query: string, db: DB) {
     (a, b) => normalize(b).length - normalize(a).length
   );
 
-  // 1순위: 토큰이 과목명 전체와 정확히 일치
   for (const token of tokens) {
     const found = sorted.find((name) => normalize(name) === token);
     if (found) return found;
   }
 
-  // 2순위: 질문에 과목명 전체가 등장
   const fullMatch = sorted.find((name) => compactQuery.includes(normalize(name)));
   if (fullMatch) return fullMatch;
 
   return "";
+}
+
+function visible(value?: string) {
+  if (!value) return false;
+
+  const text = value.trim();
+  if (!text) return false;
+  if (text.includes("자료에 명시되지 않음")) return false;
+  if (text === "없음") return false;
+  if (text.includes("미기재")) return false;
+
+  return true;
 }
 
 function formatSubject(subject: Subject) {
@@ -303,21 +296,18 @@ export async function POST(req: Request) {
     const majorName = findMajor(userMessage, db);
     const subjectName = findSubject(userMessage, db);
 
-    // 학과명이 잡히면 학과 답변 우선
     if (majorName) {
       return NextResponse.json({
         reply: formatMajor(db.majors[majorName], db),
       });
     }
 
-    // 학과가 안 잡히고 과목명이 잡히면 과목 답변
     if (subjectName) {
       return NextResponse.json({
         reply: formatSubject(db.subjects[subjectName]),
       });
     }
 
-    // 정확한 학과/과목이 없을 때만 관련 학과 검색
     if (
       userMessage.includes("계열") ||
       userMessage.includes("진로") ||
