@@ -10,13 +10,14 @@ type Message = {
 };
 
 const suggestions = [
-  "컴퓨터공학과 과목 추천",
-  "간호학과 선택과목 추천",
+  "컴퓨터공학과",
+  "간호학과",
   "경영학과",
-  "심리학과",
-  "미적분Ⅱ는 어떤 과목이야?",
-  "전자기와양자는 무슨 과목이야?",
-  "정치는 무슨 과목이야?",
+  "미적분Ⅱ",
+  "디자인 계열",
+  "경제",
+  "데이터 과학",
+  "인공지능 기초",
 ];
 
 export default function Home() {
@@ -36,7 +37,6 @@ export default function Home() {
 
   useEffect(() => {
     const el = scrollAreaRef.current;
-
     if (!el) return;
 
     el.scrollTo({
@@ -47,15 +47,11 @@ export default function Home() {
 
   async function sendMessage(text?: string) {
     const question = text || input;
-
     if (!question.trim() || loading) return;
 
     const updatedMessages: Message[] = [
       ...messages,
-      {
-        role: "user",
-        content: question,
-      },
+      { role: "user", content: question },
     ];
 
     setMessages(updatedMessages);
@@ -65,27 +61,19 @@ export default function Home() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        body: JSON.stringify({
-          messages: updatedMessages,
-        }),
+        body: JSON.stringify({ messages: updatedMessages }),
       });
 
       const data = await res.json();
 
       setMessages([
         ...updatedMessages,
-        {
-          role: "assistant",
-          content: data.reply || "답변 생성 실패",
-        },
+        { role: "assistant", content: data.reply || "답변 생성 실패" },
       ]);
     } catch {
       setMessages([
         ...updatedMessages,
-        {
-          role: "assistant",
-          content: "오류가 발생했습니다.",
-        },
+        { role: "assistant", content: "오류가 발생했습니다." },
       ]);
     } finally {
       setLoading(false);
@@ -93,20 +81,20 @@ export default function Home() {
   }
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-[#f3f6fb] text-slate-900">
+    <main className="fixed inset-0 overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 text-slate-900">
       <div
         className={`mx-auto flex h-full flex-col ${
           mobileView ? "max-w-full p-0" : "max-w-7xl px-4 py-5"
         }`}
       >
         {!mobileView && (
-          <header className="mb-5 flex shrink-0 items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <header className="mb-5 flex shrink-0 items-center justify-between rounded-[28px] border border-white/70 bg-white/85 px-6 py-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
             <div>
-              <div className="text-sm font-bold text-blue-600">
+              <div className="text-sm font-black text-blue-600">
                 Unyang High School
               </div>
 
-              <h1 className="mt-1 text-2xl font-black">
+              <h1 className="mt-1 text-2xl font-black tracking-tight">
                 선택과목 상담 챗봇
               </h1>
 
@@ -115,13 +103,13 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 rounded-full bg-slate-100 p-1">
               <button
                 onClick={() => setMobileView(false)}
-                className={`rounded-full px-4 py-2 text-sm font-bold ${
+                className={`rounded-full px-4 py-2 text-sm font-black transition ${
                   !mobileView
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 PC
@@ -129,10 +117,10 @@ export default function Home() {
 
               <button
                 onClick={() => setMobileView(true)}
-                className={`rounded-full px-4 py-2 text-sm font-bold ${
+                className={`rounded-full px-4 py-2 text-sm font-black transition ${
                   mobileView
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 모바일
@@ -142,20 +130,15 @@ export default function Home() {
         )}
 
         {mobileView && (
-          <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+          <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
             <div>
-              <div className="text-sm font-black">
-                운양고 선택과목 챗봇
-              </div>
-
-              <div className="text-xs text-slate-500">
-                모바일 채팅 모드
-              </div>
+              <div className="text-sm font-black">운양고 선택과목 챗봇</div>
+              <div className="text-xs text-slate-500">모바일 채팅 모드</div>
             </div>
 
             <button
               onClick={() => setMobileView(false)}
-              className="rounded-full bg-slate-900 px-3 py-2 text-xs font-bold text-white"
+              className="rounded-full bg-slate-900 px-3 py-2 text-xs font-black text-white"
             >
               PC
             </button>
@@ -170,10 +153,11 @@ export default function Home() {
           }`}
         >
           {!mobileView && (
-            <aside className="min-h-0 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="text-sm font-black text-slate-700">
-                추천 질문
-              </div>
+            <aside className="min-h-0 overflow-y-auto rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.07)] backdrop-blur">
+              <div className="text-sm font-black text-slate-700">추천 질문</div>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                자주 묻는 질문을 바로 확인해보세요.
+              </p>
 
               <div className="mt-4 flex flex-col gap-2">
                 {suggestions.map((s) => (
@@ -181,7 +165,7 @@ export default function Home() {
                     key={s}
                     onClick={() => sendMessage(s)}
                     disabled={loading}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 disabled:opacity-50"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
                   >
                     {s}
                   </button>
@@ -191,18 +175,15 @@ export default function Home() {
           )}
 
           <section
-            className={`flex min-h-0 flex-col overflow-hidden bg-white ${
+            className={`flex min-h-0 flex-col overflow-hidden bg-white/90 backdrop-blur ${
               mobileView
                 ? "rounded-none border-0"
-                : "rounded-3xl border border-slate-200 shadow-sm"
+                : "rounded-[28px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
             }`}
           >
             {!mobileView && (
-              <div className="shrink-0 border-b border-slate-200 px-6 py-4">
-                <div className="text-base font-black">
-                  상담 채팅
-                </div>
-
+              <div className="shrink-0 border-b border-slate-200/80 px-6 py-4">
+                <div className="text-base font-black">상담 채팅</div>
                 <div className="text-xs text-slate-500">
                   자료 기반으로 선택과목 정보를 안내합니다.
                 </div>
@@ -219,27 +200,23 @@ export default function Home() {
                 <div
                   key={i}
                   className={`mb-4 flex ${
-                    m.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
+                    m.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   <div
-                    className={`rounded-3xl shadow-sm ${
+                    className={`rounded-[26px] shadow-sm ${
                       mobileView
                         ? "max-w-[88%] px-4 py-3 text-[15px] leading-7"
                         : "max-w-[78%] px-5 py-4 text-[15px] leading-8"
                     } ${
                       m.role === "user"
-                        ? "rounded-br-md bg-blue-600 text-white"
+                        ? "rounded-br-md bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-blue-200/50"
                         : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
                     }`}
                   >
                     <div
                       className={`mb-2 text-xs font-black ${
-                        m.role === "user"
-                          ? "text-blue-100"
-                          : "text-slate-400"
+                        m.role === "user" ? "text-blue-100" : "text-slate-400"
                       }`}
                     >
                       {m.role === "user" ? "나" : "AI 상담사"}
@@ -253,24 +230,11 @@ export default function Home() {
                             const t = line.trim();
 
                             if (!t) return true;
-
-                            if (
-                              t.includes("이런 학생에게 적합")
-                            )
-                              return false;
-
-                            if (t.includes("추천 학생"))
-                              return false;
-
-                            if (
-                              t.includes("자료에 명시되지 않음")
-                            )
-                              return false;
-
+                            if (t.includes("이런 학생에게 적합")) return false;
+                            if (t.includes("추천 학생")) return false;
+                            if (t.includes("자료에 명시되지 않음")) return false;
                             if (t === "없음") return false;
-
-                            if (t.includes("미기재"))
-                              return false;
+                            if (t.includes("미기재")) return false;
 
                             return true;
                           })
@@ -282,39 +246,41 @@ export default function Home() {
               ))}
 
               {loading && (
-                <div className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-500 shadow-sm">
+                <div className="inline-flex rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-sm">
                   답변 생성 중...
                 </div>
               )}
             </div>
 
-            <footer className="shrink-0 border-t border-slate-200 bg-white p-3">
+            <footer className="shrink-0 border-t border-slate-200/80 bg-white/95 p-3">
               {mobileView && (
-                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-                  {suggestions.slice(0, 4).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => sendMessage(s)}
-                      disabled={loading}
-                      className="shrink-0 rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
-                    >
-                      {s}
-                    </button>
-                  ))}
+                <div className="mb-3">
+                  <div className="mb-2 text-[11px] font-black text-slate-400">
+                    추천 질문
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => sendMessage(s)}
+                        disabled={loading}
+                        className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-blue-100 hover:text-blue-700 disabled:opacity-50"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div className="flex gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm">
+              <div className="flex gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-sm focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100">
                 <input
                   value={input}
                   disabled={loading}
-                  onChange={(e) =>
-                    setInput(e.target.value)
-                  }
+                  onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      sendMessage();
-                    }
+                    if (e.key === "Enter") sendMessage();
                   }}
                   placeholder="질문을 입력하세요"
                   className="min-w-0 flex-1 bg-transparent px-3 py-3 text-[16px] outline-none"
